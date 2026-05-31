@@ -1,32 +1,18 @@
-const {get, put} = require('../../utils/request')
+const {get, put, post} = require('../../utils/request')
 const {API} = require('../../utils/constants')
 
 Page({
     data: {
-        userInfo: null,
         nickname: '',
         avatar: ''
     },
 
     onLoad() {
-        this.loadUserInfo()
-    },
-
-    async loadUserInfo() {
-        try {
-            const res = await get(API.USER_INFO, null, {loading: false})
-            this.setData({
-                userInfo: res,
-                nickname: res.nickname || '',
-                avatar: res.avatar || ''
-            })
-        } catch (e) {
-            console.error('加载用户信息失败', e)
-        }
-    },
-
-    onNicknameInput(e) {
-        this.setData({nickname: e.detail.value})
+        const userInfo = wx.getStorageSync('userInfo')
+        this.setData({
+            nickname: userInfo.nickname || '',
+            avatar: userInfo.avatar || ''
+        })
     },
 
     onChooseAvatar() {
@@ -35,8 +21,34 @@ Page({
             sizeType: ['compressed'],
             sourceType: ['album', 'camera'],
             success: (res) => {
-                this.setData({avatar: res.tempFilePaths[0]})
-                // TODO: 上传头像到服务器
+                const tempFilePath = res.tempFilePaths[0]
+                this.setData({avatar: tempFilePath})
+                this._uploadAvatar(tempFilePath)
+            }
+        })
+    },
+
+    _uploadAvatar(filePath) {
+        wx.uploadFile({
+            url: API.USER_UPDATE,
+            filePath: filePath,
+            name: 'avatar',
+            header: {
+                'Authorization': 'Bearer ' + wx.getStorageSync('token')
+            },
+            success: (res) => {
+                const data = JSON.parse(res.data)
+                if (data.code === 200) {
+                    this.setData({avatar: data.data || this.data.avatar})
+                    const userInfo = wx.getStorageSync('userInfo')
+                    userInfo.avatar = this.data.avatar
+                    wx.setStorageSync('userInfo', userInfo)
+                } else {
+                    wx.showToast({title: '头像上传失败', icon: 'none'})
+                }
+            },
+            fail: () => {
+                wx.showToast({title: '头像上传失败', icon: 'none'})
             }
         })
     },

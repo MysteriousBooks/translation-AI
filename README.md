@@ -29,6 +29,24 @@
 | 微信支付 | 小程序支付（requestPayment），需后端适配小程序支付参数 |
 | 基础库 | > = 2.20.0 |
 
+### Android端
+
+| 技术 | 版本 | 说明 |
+|------|------|------|
+| Kotlin | 1.9+ | 开发语言 |
+| Jetpack Compose | BOM 2024.01 | UI框架 |
+| Hilt | 2.50 | 依赖注入 |
+| Retrofit + OkHttp | 2.9.0 / 4.12.0 | 网络请求 |
+| Kotlinx Serialization | 1.6.2 | JSON序列化 |
+| DataStore | 1.0.0 | 本地存储（Token/用户信息） |
+| Navigation Compose | 2.7.6 | 导航 |
+| Material 3 | - | 主题 |
+| 支付宝SDK | 15.8.17 | 支付宝支付/登录 |
+| 微信SDK | 6.8.0 | 微信支付/登录 |
+| Coil | 2.5.0 | 图片加载 |
+| Min SDK | 24 (Android 7.0) | 最低版本 |
+| Target SDK | 34 | 目标版本 |
+
 ## 功能模块
 
 ### APP端
@@ -67,6 +85,18 @@
 | 公告管理 | 发布/编辑/删除公告 |
 | 反馈管理 | 查看/回复用户反馈 |
 
+### Android端
+
+| 模块 | 功能 |
+|------|------|
+| 认证 | 邮箱注册/登录、微信登录、支付宝登录、忘记密码、验证码 |
+| 首页 | 多语言翻译（8种语言）、源/目标语言切换、一键复制结果 |
+| 历史 | 翻译记录分页列表、下拉刷新、上拉加载更多、翻译详情 |
+| 钱包 | 余额展示、充值（支付宝/微信支付）、交易流水 |
+| 个人 | 编辑资料、修改密码、意见反馈、公告通知 |
+| 支付 | 支付宝SDK支付、微信SDK支付、支付状态轮询 |
+| 登录 | 微信OAuth授权登录、支付宝授权登录、401自动重新登录 |
+
 ### 核心特性
 
 - **字符数计费** — 按翻译字符数计费，最低消费可配置
@@ -74,6 +104,7 @@
 - **翻译限流** — 基于Redis的用户级请求频率限制
 - **系统配置缓存** — Redis缓存配置项，减少数据库查询
 - **管理后台** — Layui + jQuery实现的管理端WEB界面
+- **Android MVVM** — Hilt依赖注入 + Repository模式 + Compose声明式UI
 
 ## 快速开始
 
@@ -158,6 +189,33 @@ java -jar target/translation-1.0.0.jar
 5. 在微信公众平台配置后端API的服务器域名
 
 6. 后端需适配小程序微信支付参数（小程序支付与APP支付的请求参数不同，需在 `OrderService` 中根据 `payType` 区分处理）
+
+### Android端
+
+```bash
+# 1. 用 Android Studio 打开 android/ 目录
+
+# 2. 修改配置
+#    - android/app/build.gradle.kts 中的 BASE_URL → 后端API地址
+#    - android/app/build.gradle.kts 中的 WECHAT_APP_ID → 微信AppId
+#    - android/app/src/main/java/com/translation/app/App.kt 中的 WECHAT_APP_ID → 同上
+
+# 3. 支付宝配置
+#    - 在支付宝开放平台创建应用，获取 appid 和密钥
+#    - 修改 PaymentManager 中 partnerId 为商户号
+
+# 4. 微信配置
+#    - 在微信开放平台创建应用，获取 AppId 和签名
+#    - 在微信公众平台配置服务器域名
+#    - wxapi/WXEntryActivity 和 wxapi/WXPayEntryActivity 包名必须正确
+
+# 5. 构建运行
+./gradlew assembleDebug
+# 或通过 Android Studio 直接运行
+
+# 6. 签名（Release）
+#    生成签名密钥库，配置 signingConfigs 在 build.gradle.kts 中
+```
 
 ## 数据库设计
 
@@ -255,6 +313,67 @@ src/main/resources/
         ├── config.html          # 系统配置
         ├── notice.html          # 公告管理
         └── feedback.html        # 反馈管理
+```
+
+### Android端项目结构
+
+```
+android/app/src/main/java/com/translation/app/
+├── App.kt                              # @HiltAndroidApp，注册微信SDK
+├── MainActivity.kt                      # 单Activity + 底部导航
+│
+├── data/
+│   ├── api/
+│   │   ├── ApiClient.kt                # Retrofit实例（含AuthInterceptor）
+│   │   ├── ApiConfig.kt               # BASE_URL（BuildConfig）、超时常量
+│   │   ├── interceptors/
+│   │   │   └── AuthInterceptor.kt      # JWT注入 + 401/code=1001处理
+│   │   └── services/                   # 7个API接口（Auth/User/Translate/Wallet/Announcement/Feedback/Refund）
+│   ├── dto/                            # 请求/响应数据类
+│   │   ├── ApiResponse.kt             # {code, msg, data}
+│   │   ├── PageResponse.kt             # {total, page, size, records}
+│   │   └── auth/user/translate/wallet/feedback/refund/notice/
+│   └── local/
+│       └── PreferencesManager.kt       # DataStore持久化（Token/用户信息）
+│
+├── domain/
+│   ├── model/                          # 领域模型（User/Translation/Wallet/Order/Announcement）
+│   └── repository/                     # 7个Repository接口
+│
+├── repository/impl/                    # 7个Repository实现（调用ApiService + 数据映射）
+│
+├── di/
+│   ├── AppModule.kt                   # PreferencesManager、PaymentManager、SocialLoginManager
+│   ├── NetworkModule.kt                # 7个ApiService @Provides
+│   └── RepositoryModule.kt             # 7个@Binds接口→实现
+│
+├── ui/
+│   ├── theme/                          # Color/Type/Shape/Theme（Material 3）
+│   ├── navigation/                     # Screen路由、BottomNavItem、AppNavHost
+│   ├── components/                     # 通用组件（LoadingIndicator/ErrorDialog/LanguageSelector/PayMethodSelector）
+│   ├── auth/                           # AuthViewModel、Login/Register/ForgotPassword
+│   ├── main/                           # HomeViewModel+HomeScreen、HistoryViewModel+HistoryScreen+HistoryDetail
+│   ├── wallet/                         # WalletViewModel+WalletScreen、RechargeScreen、RechargeResultScreen
+│   ├── profile/                        # ProfileViewModel+ProfileScreen、EditProfile、ChangePassword
+│   ├── notice/                         # NoticeListViewModel+NoticeListScreen、NoticeDetailViewModel+NoticeDetailScreen
+│   └── feedback/                       # FeedbackViewModel+FeedbackScreen
+│
+├── util/
+│   ├── Constants.kt                    # 枚举（Language/TranslateStatus/OrderStatus等）、常量
+│   ├── Extensions.kt                   # 扩展函数（formatMoney/formatDateTime/truncate）
+│   ├── PaymentManager.kt               # 支付宝/微信支付SDK封装
+│   └── SocialLoginManager.kt           # 微信/支付宝登录SDK封装
+│
+└── wxapi/
+    ├── WXEntryActivity.kt              # 微信登录回调
+    └── WXPayEntryActivity.kt           # 微信支付回调
+
+android/app/src/main/res/
+├── drawable/                           # ic_home/ic_history/ic_wallet/ic_profile
+├── values/strings.xml                  # app_name
+└── mipmap-*/                           # 应用图标（需补充）
+```
+
 ```
 
 ## API接口
