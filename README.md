@@ -157,6 +157,8 @@ java -jar target/translation-1.0.0.jar
 
 5. 在微信公众平台配置后端API的服务器域名
 
+6. 后端需适配小程序微信支付参数（小程序支付与APP支付的请求参数不同，需在 `OrderService` 中根据 `payType` 区分处理）
+
 ## 数据库设计
 
 共10张表：
