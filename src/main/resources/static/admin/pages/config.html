@@ -1,0 +1,54 @@
+<div class="layui-fluid" style="padding:20px;">
+    <div class="layui-card">
+        <div class="layui-card-header">系统配置</div>
+        <div class="layui-card-body">
+            <form class="layui-form" id="configForm" lay-filter="configForm"></form>
+        </div>
+    </div>
+</div>
+
+<script>
+    layui.use(['form', 'layer'], function () {
+        var form = layui.form;
+        var layer = layui.layer;
+
+        API.get('/api/admin/config/list', {}, function (res) {
+            if (res.code === 200) {
+                var list = res.data;
+                var html = '';
+                list.forEach(function (item) {
+                    html += '<div class="layui-form-item">';
+                    html += '<label class="layui-form-label" style="width:200px;text-align:left;padding-left:0;">' + item.description + '</label>';
+                    html += '<div class="layui-input-block" style="margin-left:220px;">';
+                    html += '<input type="text" name="' + item.configKey + '" value="' + (item.configValue || '') + '" class="layui-input" style="max-width:500px;">';
+                    html += '<div class="layui-form-mid layui-word-aux" style="margin-left:10px;">Key: ' + item.configKey + '</div>';
+                    html += '</div></div>';
+                });
+                html += '<div class="layui-form-item"><div class="layui-input-block" style="margin-left:220px;">';
+                html += '<button class="layui-btn" lay-submit lay-filter="saveConfig">保存配置</button>';
+                html += '</div></div>';
+                $('#configForm').html(html);
+                form.render();
+            }
+        });
+
+        form.on('submit(saveConfig)', function (data) {
+            var field = data.field;
+            var keys = Object.keys(field);
+            var completed = 0;
+            var total = keys.length;
+            var hasError = false;
+
+            keys.forEach(function (key) {
+                API.put('/api/admin/config/' + key, field[key], function (res) {
+                    completed++;
+                    if (res.code !== 200) hasError = true;
+                    if (completed === total) {
+                        layer.msg(hasError ? '部分配置保存失败' : '配置保存成功');
+                    }
+                });
+            });
+            return false;
+        });
+    });
+</script>

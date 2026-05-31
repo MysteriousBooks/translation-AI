@@ -1,0 +1,138 @@
+<div class="layui-fluid" style="padding:20px;">
+    <div class="layui-card">
+        <div class="layui-card-header">退款管理</div>
+        <div class="layui-card-body">
+            <form class="layui-form" id="refundSearchForm" lay-filter="refundSearchForm">
+                <div class="layui-form-item">
+                    <div class="layui-inline">
+                        <label class="layui-form-label">状态</label>
+                        <div class="layui-input-inline">
+                            <select name="status">
+                                <option value="">全部</option>
+                                <option value="0">待审核</option>
+                                <option value="1">已同意</option>
+                                <option value="2">已拒绝</option>
+                                <option value="3">退款中</option>
+                                <option value="4">已完成</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <button class="layui-btn" lay-submit lay-filter="searchRefund"><i
+                                class="layui-icon layui-icon-search"></i> 搜索
+                        </button>
+                        <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                    </div>
+                </div>
+            </form>
+            <table id="refundTable" lay-filter="refundTable"></table>
+        </div>
+    </div>
+</div>
+
+<script>
+    layui.use(['table', 'form', 'layer'], function () {
+        var table = layui.table;
+        var form = layui.form;
+        var layer = layui.layer;
+
+        table.render({
+            elem: '#refundTable',
+            url: '',
+            page: true,
+            limit: 10,
+            cols: [[
+                {field: 'id', title: 'ID', width: 70},
+                {field: 'refundNo', title: '退款单号', width: 180},
+                {field: 'orderNo', title: '订单号', width: 180},
+                {field: 'userEmail', title: '用户邮箱', width: 170},
+                {field: 'amount', title: '退款金额(元)', width: 120},
+                {field: 'reason', title: '退款原因', width: 180},
+                {
+                    field: 'status', title: '状态', width: 100, templet: function (d) {
+                        var cls = {
+                            0: 'layui-bg-gray',
+                            1: 'layui-bg-green',
+                            2: 'layui-bg-red',
+                            3: 'layui-bg-blue',
+                            4: 'layui-bg-green'
+                        };
+                        return '<span class="layui-badge ' + (cls[d.status] || '') + '">' + (RefundStatusMap[d.status] || d.status) + '</span>';
+                    }
+                },
+                {field: 'auditRemark', title: '审核备注', width: 150},
+                {field: 'createTime', title: '申请时间', width: 170},
+                {title: '操作', width: 150, fixed: 'right', toolbar: '#refundBar'}
+            ]]
+        });
+
+        function loadData(params) {
+            var p = {page: 1, size: 10};
+            if (params) Object.assign(p, params);
+            API.get('/api/admin/refund/list', p, function (res) {
+                if (res.code === 200) {
+                    table.reload('refundTable', {
+                        data: res.data.records,
+                        page: {curr: res.data.current, limit: res.data.size, count: res.data.total}
+                    });
+                }
+            });
+        }
+
+        loadData();
+
+        table.on('tool(refundTable)', function (obj) {
+            var data = obj.data;
+            if (obj.event === 'approve') {
+                layer.prompt({formType: 2, title: '同意退款 - 审核备注'}, function (val, index) {
+                    API.put('/api/admin/refund/' + data.id + '/approve', {auditRemark: val}, function (res) {
+                        if (res.code === 200) {
+                            layer.msg('已同意退款');
+                            loadData({page: $('.layui-laypage-curr .layui-laypage-em').next().text() || 1, size: 10});
+                        } else {
+                            layer.msg(res.message || '操作失败');
+                        }
+                        layer.close(index);
+                    });
+                });
+            } else if (obj.event === 'reject') {
+                layer.prompt({formType: 2, title: '拒绝退款 - 审核备注'}, function (val, index) {
+                    API.put('/api/admin/refund/' + data.id + '/reject', {auditRemark: val}, function (res) {
+                        if (res.code === 200) {
+                            layer.msg('已拒绝退款');
+                            loadData({page: $('.layui-laypage-curr .layui-laypage-em').next().text() || 1, size: 10});
+                        } else {
+                            layer.msg(res.message || '操作失败');
+                        }
+                        layer.close(index);
+                    });
+                });
+            }
+        });
+
+        form.on('submit(searchRefund)', function (data) {
+            loadData(data.field);
+            return false;
+        });
+
+        table.on('page(refundTable)', function (obj) {
+            var formData = {};
+            var f = $('#refundSearchForm').serializeArray();
+            for (var i = 0; i < f.length; i++) {
+                formData[f[i].name] = f[i].value;
+            }
+            formData.page = obj.curr;
+            formData.size = obj.limit;
+            loadData(formData);
+        });
+    });
+</script>
+
+<script type="text/html" id="refundBar">
+    {{# if(d.status === 0){ }}
+    <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="approve">同意</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="reject">拒绝</a>
+    {{# } else { }}
+    <a class="layui-btn layui-btn-disabled layui-btn-xs">已处理</a>
+    {{# } }}
+</script>

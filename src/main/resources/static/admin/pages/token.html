@@ -1,0 +1,130 @@
+<div class="layui-fluid" style="padding:20px;">
+    <div class="layui-card">
+        <div class="layui-card-header">Token统计</div>
+        <div class="layui-card-body">
+            <form class="layui-form" id="tokenSearchForm" lay-filter="tokenSearchForm">
+                <div class="layui-form-item">
+                    <div class="layui-inline">
+                        <label class="layui-form-label">开始日期</label>
+                        <div class="layui-input-inline">
+                            <input type="text" name="startDate" id="startDate" placeholder="yyyy-MM-dd"
+                                   class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <label class="layui-form-label">结束日期</label>
+                        <div class="layui-input-inline">
+                            <input type="text" name="endDate" id="endDate" placeholder="yyyy-MM-dd" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <button class="layui-btn" lay-submit lay-filter="searchToken"><i
+                                class="layui-icon layui-icon-search"></i> 汇总查询
+                        </button>
+                    </div>
+                </div>
+            </form>
+            <div id="tokenSummary" style="margin-bottom:20px;"></div>
+            <table id="tokenTable" lay-filter="tokenTable"></table>
+        </div>
+    </div>
+</div>
+
+<script>
+    layui.use(['table', 'form', 'laydate'], function () {
+        var table = layui.table;
+        var form = layui.form;
+        var laydate = layui.laydate;
+
+        laydate.render({elem: '#startDate', format: 'yyyy-MM-dd'});
+        laydate.render({elem: '#endDate', format: 'yyyy-MM-dd'});
+
+        var today = new Date();
+        var weekAgo = new Date(today.getTime() - 7 * 86400000);
+
+        function fmt(d) {
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        $('#startDate').val(fmt(weekAgo));
+        $('#endDate').val(fmt(today));
+
+        table.render({
+            elem: '#tokenTable',
+            url: '',
+            page: true,
+            limit: 10,
+            cols: [[
+                {field: 'statDate', title: '日期', width: 120},
+                {field: 'totalCalls', title: '调用次数', width: 100},
+                {field: 'totalTokens', title: '消耗Token', width: 120},
+                {field: 'totalChars', title: '翻译字符数', width: 120},
+                {field: 'totalCost', title: '消耗金额(元)', width: 120},
+                {field: 'successCount', title: '成功次数', width: 100},
+                {field: 'failCount', title: '失败次数', width: 100}
+            ]]
+        });
+
+        function loadData(params) {
+            var p = {page: 1, size: 10};
+            if (params) Object.assign(p, params);
+            API.get('/api/admin/token/detail', p, function (res) {
+                if (res.code === 200) {
+                    table.reload('tokenTable', {
+                        data: res.data.records,
+                        page: {curr: res.data.current, limit: res.data.size, count: res.data.total}
+                    });
+                }
+            });
+        }
+
+        function loadSummary(params) {
+            if (!params.startDate || !params.endDate) return;
+            API.get('/api/admin/token/statistics', params, function (res) {
+                if (res.code === 200 && res.data && res.data.length > 0) {
+                    var total = {calls: 0, tokens: 0, chars: 0, cost: 0, success: 0, fail: 0};
+                    res.data.forEach(function (d) {
+                        total.calls += d.totalCalls || 0;
+                        total.tokens += d.totalTokens || 0;
+                        total.chars += d.totalChars || 0;
+                        total.cost += parseFloat(d.totalCost) || 0;
+                        total.success += d.successCount || 0;
+                        total.fail += d.failCount || 0;
+                    });
+                    var html = '<div class="layui-row layui-col-space10">';
+                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#667eea,#764ba2);"><div class="stat-label">总调用</div><div class="stat-value">' + total.calls + '</div></div></div>';
+                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#f093fb,#f5576c);"><div class="stat-label">总Token</div><div class="stat-value">' + total.tokens + '</div></div></div>';
+                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#4facfe,#00f2fe);"><div class="stat-label">总字符</div><div class="stat-value">' + total.chars + '</div></div></div>';
+                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#43e97b,#38f9d7);"><div class="stat-label">总金额(元)</div><div class="stat-value">' + total.cost.toFixed(2) + '</div></div></div>';
+                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#52c41a,#73d13d);"><div class="stat-label">成功</div><div class="stat-value">' + total.success + '</div></div></div>';
+                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#ff4d4f,#ff7875);"><div class="stat-label">失败</div><div class="stat-value">' + total.fail + '</div></div></div>';
+                    html += '</div>';
+                    $('#tokenSummary').html(html);
+                } else {
+                    $('#tokenSummary').html('<p style="color:#999;text-align:center;">暂无汇总数据</p>');
+                }
+            });
+        }
+
+        var initParams = {startDate: fmt(weekAgo), endDate: fmt(today)};
+        loadData(initParams);
+        loadSummary(initParams);
+
+        form.on('submit(searchToken)', function (data) {
+            loadData(data.field);
+            loadSummary(data.field);
+            return false;
+        });
+
+        table.on('page(tokenTable)', function (obj) {
+            var formData = {};
+            var f = $('#tokenSearchForm').serializeArray();
+            for (var i = 0; i < f.length; i++) {
+                formData[f[i].name] = f[i].value;
+            }
+            formData.page = obj.curr;
+            formData.size = obj.limit;
+            loadData(formData);
+        });
+    });
+</script>
