@@ -1,50 +1,15 @@
-/* 管理后台全局样式 */
-
-/* 基础重置与圆角 */
-* {
-    border-radius: 6px !important;
-}
+/* 管理后台全局样式 - 圆润风格 */
 
 body {
     background: #f0f2f5;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
-/* 侧边栏 */
-.layui-layout-admin .layui-side {
-    background: #1e2a3a !important;
-    border-radius: 0 !important;
-}
-
-.layui-layout-admin .layui-side .layui-nav {
-    background: #1e2a3a !important;
-    border-radius: 0 !important;
-}
-
-.layui-layout-admin .layui-side .layui-nav-item a {
-    color: #a0b4c8 !important;
-    border-radius: 8px !important;
-    margin: 2px 10px;
-    transition: all 0.3s ease;
-}
-
-.layui-layout-admin .layui-side .layui-nav-item a:hover,
-.layui-layout-admin .layui-side .layui-nav-item a.layui-this {
-    color: #fff !important;
-    background: linear-gradient(135deg, #667eea, #764ba2) !important;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.layui-layout-admin .layui-side .layui-nav .layui-nav-itemed > a {
-    color: #fff !important;
-    background: transparent !important;
-}
-
-/* 顶部导航 */
+/* ====== 顶部导航 ====== */
 .layui-layout-admin .layui-header {
     background: #fff !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    border-radius: 0 !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .admin-title {
@@ -77,25 +42,71 @@ body {
     color: #667eea !important;
 }
 
-/* 内容区域 */
-.layui-layout-admin .layui-body {
-    background: #f0f2f5;
-    border-radius: 0 !important;
-    top: 60px;
+/* ====== 侧边栏 ====== */
+.layui-layout-admin .layui-side {
+    background: #1e2a3a !important;
 }
 
-/* 卡片样式 */
+.layui-layout-admin .layui-side .layui-nav {
+    background: transparent !important;
+    padding: 10px 8px;
+}
+
+.layui-layout-admin .layui-side .layui-nav-item {
+    margin-bottom: 2px;
+}
+
+.layui-layout-admin .layui-side .layui-nav-item a {
+    color: #a0b4c8 !important;
+    border-radius: 10px !important;
+    margin: 0;
+    padding-left: 22px;
+    height: 44px;
+    line-height: 44px;
+    transition: all 0.25s ease;
+}
+
+.layui-layout-admin .layui-side .layui-nav-item a:hover,
+.layui-layout-admin .layui-side .layui-nav-item a.layui-this {
+    color: #fff !important;
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+}
+
+.layui-layout-admin .layui-side .layui-nav .layui-nav-itemed > a {
+    color: #fff !important;
+    background: transparent !important;
+    box-shadow: none;
+}
+
+.layui-layout-admin .layui-side .layui-nav-item a i {
+    margin-right: 10px;
+    font-size: 16px;
+}
+
+/* ====== 内容区 ====== */
+.layui-layout-admin .layui-body {
+    background: #f0f2f5;
+    top: 60px;
+    padding: 0;
+}
+
+#contentArea {
+    padding: 4px;
+}
+
+/* ====== 卡片 ====== */
 .layui-card {
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     border: none !important;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
     margin-bottom: 16px;
     transition: box-shadow 0.3s ease;
     overflow: hidden;
 }
 
 .layui-card:hover {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.09);
 }
 
 .layui-card-header {
@@ -103,19 +114,50 @@ body {
     font-size: 15px;
     font-weight: 600;
     color: #333;
-    border-radius: 12px 12px 0 0 !important;
+    height: 48px;
+    line-height: 48px;
 }
 
 .layui-card-body {
-    border-radius: 0 0 12px 12px !important;
+    padding: 16px 20px;
 }
 
-/* 表格圆角 */
+/* ====== 统计卡片 ====== */
+.stat-card {
+    border-radius: 14px !important;
+    padding: 22px 20px;
+    color: #fff;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.stat-card .stat-value {
+    font-size: 30px;
+    font-weight: 700;
+    margin-top: 8px;
+}
+
+.stat-card .stat-label {
+    font-size: 13px;
+    opacity: 0.85;
+}
+
+/* ====== 表格 ====== */
 .layui-table-view {
-    border-radius: 10px !important;
+    border-radius: 12px !important;
     border: none !important;
     overflow: hidden;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+}
+
+.layui-table-view .layui-table-box {
+    border-radius: 12px !important;
+    overflow: hidden;
 }
 
 .layui-table thead tr {
@@ -123,7 +165,7 @@ body {
 }
 
 .layui-table th {
-    background: #fafbfc;
+    background: #fafbfc !important;
     font-weight: 600;
     color: #555;
     border-color: #eee;
@@ -134,19 +176,35 @@ body {
 }
 
 .layui-table tr:hover td {
-    background: #f5f7ff !important;
+    background: #f7f8ff !important;
 }
 
-/* 按钮圆角 */
+.layui-table[lay-skin="nob"] {
+    border-radius: 12px !important;
+    overflow: hidden;
+}
+
+.layui-table[lay-skin="nob"] td {
+    padding: 10px 16px;
+    color: #555;
+}
+
+.layui-table[lay-skin="nob"] tr td:first-child {
+    color: #888;
+    font-weight: 500;
+}
+
+/* ====== 按钮 ====== */
 .layui-btn {
     border-radius: 8px !important;
     font-weight: 500;
-    transition: all 0.3s ease;
+    transition: all 0.25s ease;
+    letter-spacing: 0.5px;
 }
 
 .layui-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
 }
 
 .layui-btn-normal {
@@ -158,65 +216,156 @@ body {
     background: linear-gradient(135deg, #5a6fd6, #6a3f9a) !important;
 }
 
-/* 输入框圆角 */
-.layui-input,
-.layui-textarea,
-.layui-select {
+.layui-btn-primary {
+    border: 1px solid #ddd;
     border-radius: 8px !important;
-    border-color: #ddd;
+}
+
+.layui-btn-primary:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.layui-btn-xs {
+    border-radius: 6px !important;
+    font-size: 12px;
+    padding: 0 8px;
+}
+
+/* ====== 输入框 ====== */
+.layui-input,
+.layui-textarea {
+    border-radius: 8px !important;
+    border-color: #dcdfe6;
     transition: border-color 0.3s, box-shadow 0.3s;
+    height: 38px;
 }
 
 .layui-input:focus,
 .layui-textarea:focus {
     border-color: #667eea !important;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
 }
 
-/* 下拉选择框 */
-.layui-form-select dl {
+.layui-input-wrap {
     border-radius: 8px !important;
+}
+
+.layui-input-wrap .layui-input {
+    border-radius: 8px !important;
+}
+
+.layui-input-prefix {
+    border-radius: 8px 0 0 8px !important;
+}
+
+/* ====== 下拉选择 ====== */
+.layui-form-select dl {
+    border-radius: 10px !important;
     border: none;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    margin-top: 4px;
+    padding: 4px 0;
+}
+
+.layui-form-select dl dd {
+    border-radius: 6px !important;
+    margin: 0 4px;
+    padding: 0 12px;
+    transition: background 0.15s;
 }
 
 .layui-form-select dl dd.layui-this {
     background: #667eea !important;
     color: #fff;
+    border-radius: 6px !important;
 }
 
-/* 分页圆角 */
+.layui-form-select dl dd:hover {
+    background: #f0f2ff !important;
+    color: #333;
+}
+
+.layui-form-select dl dd.layui-this:hover {
+    background: #667eea !important;
+    color: #fff;
+}
+
+/* ====== 表单 ====== */
+.layui-form-label {
+    font-weight: 500;
+    color: #555;
+}
+
+.layui-form-item {
+    margin-bottom: 12px;
+}
+
+/* ====== 分页 ====== */
+.layui-laypage {
+    margin-top: 14px;
+}
+
 .layui-laypage a,
 .layui-laypage span {
-    border-radius: 6px !important;
+    border-radius: 8px !important;
+    border-color: #ddd;
+    transition: all 0.2s;
+}
+
+.layui-laypage a:hover {
+    color: #667eea;
+    border-color: #667eea;
 }
 
 .layui-laypage .layui-laypage-curr .layui-laypage-em {
     background: linear-gradient(135deg, #667eea, #764ba2) !important;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
 }
 
-/* 弹窗圆角 */
+/* ====== 弹窗 ====== */
 .layui-layer {
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
 .layui-layer-title {
-    border-radius: 12px 12px 0 0 !important;
-    background: #fafbfc;
+    border-radius: 14px 14px 0 0 !important;
+    background: #fafbfc !important;
     font-weight: 600;
+    color: #333;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.layui-layer-content {
+    border-radius: 0 !important;
+}
+
+.layui-layer-btn {
+    border-top: 1px solid #f0f0f0;
+    padding: 10px 16px;
 }
 
 .layui-layer-btn a {
     border-radius: 8px !important;
 }
 
-/* 标签圆角 */
+.layui-layer-msg {
+    border-radius: 10px !important;
+}
+
+/* ====== 提示确认框 ====== */
+.layui-layer-dialog .layui-layer-content {
+    padding: 20px;
+}
+
+/* ====== 标签 ====== */
 .layui-badge {
     border-radius: 10px !important;
-    padding: 2px 8px;
+    padding: 2px 10px;
     font-size: 12px;
+    font-weight: 500;
 }
 
 .layui-bg-green {
@@ -239,105 +388,95 @@ body {
     background-color: #ff4d4f !important;
 }
 
-/* 表单标签 */
-.layui-form-label {
-    font-weight: 500;
-    color: #555;
-}
-
-/* 底部 */
-.layui-layout-admin .layui-footer {
-    background: #fff;
-    border-top: 1px solid #f0f0f0;
-    border-radius: 0 !important;
-}
-
-/* 搜索区域 */
-.layui-form-item {
-    margin-bottom: 12px;
-}
-
-/* 统计卡片 */
-.stat-card {
-    border-radius: 12px !important;
-    padding: 20px;
-    color: #fff;
-    text-align: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-
-.stat-card .stat-value {
-    font-size: 28px;
-    font-weight: 700;
-    margin-top: 8px;
-}
-
-.stat-card .stat-label {
-    font-size: 13px;
-    opacity: 0.85;
-}
-
-/* 累计数据表格 */
-.layui-table[lay-skin="nob"] {
-    border-radius: 10px !important;
-}
-
-.layui-table[lay-skin="nob"] td {
-    padding: 10px 15px;
-    color: #555;
-}
-
-.layui-table[lay-skin="nob"] tr td:first-child {
-    color: #888;
-    font-weight: 500;
-}
-
-/* 工具条按钮 */
-.layui-btn-xs {
-    border-radius: 6px !important;
-    font-size: 12px;
-}
-
-/* 日期选择器 */
+/* ====== 日期选择器 ====== */
 .layui-laydate {
-    border-radius: 12px !important;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+    overflow: hidden;
 }
 
 .layui-laydate .layui-laydate-header {
-    border-radius: 12px 12px 0 0 !important;
+    border-radius: 14px 14px 0 0 !important;
 }
 
-.layui-laydate .layui-this {
+.layui-laydate .layui-laydate-content td.layui-this {
     background-color: #667eea !important;
+    border-radius: 8px !important;
+}
+
+.layui-laydate .layui-laydate-footer {
+    border-radius: 0 0 14px 14px !important;
+}
+
+.layui-laydate .layui-laydate-footer .laydate-btns-confirm {
+    background: #667eea !important;
     border-radius: 6px !important;
 }
 
-/* 滚动条美化 */
+/* ====== 底部 ====== */
+.layui-layout-admin .layui-footer {
+    background: #fff;
+    border-top: 1px solid #f0f0f0;
+    color: #999;
+}
+
+/* ====== 搜索区域间距 ====== */
+.layui-inline {
+    margin-right: 6px;
+}
+
+/* ====== 工具条模板按钮间距 ====== */
+.layui-table-cell .layui-btn {
+    margin: 0 2px;
+}
+
+/* ====== 滚动条美化 ====== */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
+    background: #c8c8c8;
     border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #a0a0a0;
+    background: #a8a8a8;
 }
 
 ::-webkit-scrollbar-track {
     background: transparent;
 }
 
-/* 提示消息圆角 */
-.layui-layer-msg {
-    border-radius: 8px !important;
+/* ====== 登录页特殊样式 ====== */
+.login-container {
+    background: #fff;
+    border-radius: 20px !important;
+    padding: 44px;
+    width: 400px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+}
+
+.login-title {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 32px;
+}
+
+.login-title i {
+    font-size: 28px;
+    color: #667eea;
+    margin-right: 8px;
+}
+
+.login-container .layui-btn-fluid {
+    border-radius: 10px !important;
+    height: 44px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    margin-top: 6px;
 }
