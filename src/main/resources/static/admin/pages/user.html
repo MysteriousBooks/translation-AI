@@ -1,0 +1,146 @@
+<div class="layui-fluid" style="padding:20px;">
+    <div class="layui-card">
+        <div class="layui-card-header">用户管理</div>
+        <div class="layui-card-body">
+            <form class="layui-form" id="userSearchForm" lay-filter="userSearchForm">
+                <div class="layui-form-item">
+                    <div class="layui-inline">
+                        <label class="layui-form-label">关键词</label>
+                        <div class="layui-input-inline">
+                            <input type="text" name="keyword" placeholder="邮箱/昵称" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <label class="layui-form-label">状态</label>
+                        <div class="layui-input-inline">
+                            <select name="status">
+                                <option value="">全部</option>
+                                <option value="1">正常</option>
+                                <option value="0">停用</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <button class="layui-btn" lay-submit lay-filter="searchUser"><i
+                                class="layui-icon layui-icon-search"></i> 搜索
+                        </button>
+                        <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                    </div>
+                </div>
+            </form>
+            <table id="userTable" lay-filter="userTable"></table>
+        </div>
+    </div>
+</div>
+
+<script>
+    layui.use(['table', 'form', 'layer'], function () {
+        var table = layui.table;
+        var form = layui.form;
+        var layer = layui.layer;
+
+        table.render({
+            elem: '#userTable',
+            url: '',
+            page: true,
+            limit: 10,
+            cols: [[
+                {field: 'id', title: 'ID', width: 80},
+                {field: 'email', title: '邮箱', width: 180},
+                {field: 'nickname', title: '昵称', width: 120},
+                {field: 'phone', title: '手机号', width: 130},
+                {
+                    field: 'loginType', title: '登录类型', width: 100, templet: function (d) {
+                        return LoginTypeMap[d.loginType] || d.loginType;
+                    }
+                },
+                {
+                    field: 'status', title: '状态', width: 90, templet: function (d) {
+                        return d.status === 1 ? '<span class="layui-badge layui-bg-green">正常</span>' : '<span class="layui-badge">停用</span>';
+                    }
+                },
+                {field: 'balance', title: '余额(元)', width: 110},
+                {field: 'totalConsume', title: '累计消耗(元)', width: 120},
+                {field: 'createTime', title: '注册时间', width: 170},
+                {title: '操作', width: 150, fixed: 'right', toolbar: '#userBar'}
+            ]]
+        });
+
+        function loadData(params) {
+            var p = {page: 1, size: 10};
+            if (params) Object.assign(p, params);
+            API.get('/api/admin/user/list', p, function (res) {
+                if (res.code === 200) {
+                    table.reload('userTable', {
+                        data: res.data.records,
+                        page: {curr: res.data.current, limit: res.data.size, count: res.data.total}
+                    });
+                }
+            });
+        }
+
+        loadData();
+
+        table.on('tool(userTable)', function (obj) {
+            var data = obj.data;
+            if (obj.event === 'toggleStatus') {
+                var newStatus = data.status === 1 ? 0 : 1;
+                var tip = newStatus === 0 ? '确定停用该用户吗？停用后将强制下线。' : '确定启用该用户吗？';
+                layer.confirm(tip, function (index) {
+                    API.put('/api/admin/user/' + data.id + '/status?status=' + newStatus, null, function (res) {
+                        if (res.code === 200) {
+                            layer.msg('操作成功');
+                            loadData({page: $('.layui-laypage-curr .layui-laypage-em').next().text() || 1, size: 10});
+                        } else {
+                            layer.msg(res.message || '操作失败');
+                        }
+                        layer.close(index);
+                    });
+                });
+            } else if (obj.event === 'detail') {
+                API.get('/api/admin/user/' + data.id, {}, function (res) {
+                    if (res.code === 200) {
+                        var u = res.data;
+                        var html = '<table class="layui-table" lay-skin="nob">';
+                        html += '<tr><td>ID</td><td>' + u.id + '</td></tr>';
+                        html += '<tr><td>邮箱</td><td>' + (u.email || '-') + '</td></tr>';
+                        html += '<tr><td>昵称</td><td>' + (u.nickname || '-') + '</td></tr>';
+                        html += '<tr><td>手机号</td><td>' + (u.phone || '-') + '</td></tr>';
+                        html += '<tr><td>登录类型</td><td>' + (LoginTypeMap[u.loginType] || u.loginType) + '</td></tr>';
+                        html += '<tr><td>状态</td><td>' + (UserStatusMap[u.status] || u.status) + '</td></tr>';
+                        html += '<tr><td>余额</td><td>' + (u.balance || 0) + ' 元</td></tr>';
+                        html += '<tr><td>累计消耗</td><td>' + (u.totalConsume || 0) + ' 元</td></tr>';
+                        html += '<tr><td>注册时间</td><td>' + (u.createTime || '-') + '</td></tr>';
+                        html += '</table>';
+                        layer.open({type: 1, title: '用户详情', area: ['450px', '400px'], content: html});
+                    }
+                });
+            }
+        });
+
+        form.on('submit(searchUser)', function (data) {
+            loadData(data.field);
+            return false;
+        });
+
+        table.on('page(userTable)', function (obj) {
+            var formData = {};
+            var f = $('#userSearchForm').serializeArray();
+            for (var i = 0; i < f.length; i++) {
+                formData[f[i].name] = f[i].value;
+            }
+            formData.page = obj.curr;
+            formData.size = obj.limit;
+            loadData(formData);
+        });
+    });
+</script>
+
+<script type="text/html" id="userBar">
+    <a class="layui-btn layui-btn-xs" lay-event="detail">详情</a>
+    {{# if(d.status === 1){ }}
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="toggleStatus">停用</a>
+    {{# } else { }}
+    <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="toggleStatus">启用</a>
+    {{# } }}
+</script>

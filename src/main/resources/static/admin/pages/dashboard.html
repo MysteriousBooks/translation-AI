@@ -1,0 +1,77 @@
+<div class="layui-fluid" style="padding:20px;">
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md3">
+            <div class="stat-card" style="background:linear-gradient(135deg,#667eea,#764ba2);">
+                <div class="stat-label">今日注册</div>
+                <div class="stat-value" id="todayNewUsers">-</div>
+            </div>
+        </div>
+        <div class="layui-col-md3">
+            <div class="stat-card" style="background:linear-gradient(135deg,#f093fb,#f5576c);">
+                <div class="stat-label">今日充值(元)</div>
+                <div class="stat-value" id="todayRecharge">-</div>
+            </div>
+        </div>
+        <div class="layui-col-md3">
+            <div class="stat-card" style="background:linear-gradient(135deg,#4facfe,#00f2fe);">
+                <div class="stat-label">今日翻译(次)</div>
+                <div class="stat-value" id="todayTranslate">-</div>
+            </div>
+        </div>
+        <div class="layui-col-md3">
+            <div class="stat-card" style="background:linear-gradient(135deg,#43e97b,#38f9d7);">
+                <div class="stat-label">今日消耗(元)</div>
+                <div class="stat-value" id="todayConsume">-</div>
+            </div>
+        </div>
+    </div>
+    <div class="layui-row layui-col-space15" style="margin-top:4px;">
+        <div class="layui-col-md6">
+            <div class="layui-card">
+                <div class="layui-card-header">累计数据</div>
+                <div class="layui-card-body">
+                    <table class="layui-table" lay-skin="nob">
+                        <tr>
+                            <td>总用户数</td>
+                            <td id="totalUsers">-</td>
+                        </tr>
+                        <tr>
+                            <td>总充值金额(元)</td>
+                            <td id="totalRecharge">-</td>
+                        </tr>
+                        <tr>
+                            <td>总消耗金额(元)</td>
+                            <td id="totalConsume">-</td>
+                        </tr>
+                        <tr>
+                            <td>今日Token消耗</td>
+                            <td id="todayTokens">-</td>
+                        </tr>
+                        <tr>
+                            <td>今日翻译字符数</td>
+                            <td id="todayChars">-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    layui.use(['layer'], function () {
+        API.get('/api/admin/dashboard/overview', {}, function (res) {
+            if (res.code === 200) {
+                var d = res.data;
+                document.getElementById('todayNewUsers').textContent = d.todayNewUsers;
+                document.getElementById('todayRecharge').textContent = d.todayRechargeAmount;
+                document.getElementById('todayTranslate').textContent = d.todayTranslateCount;
+                document.getElementById('todayConsume').textContent = d.todayConsumeAmount;
+                document.getElementById('totalUsers').textContent = d.totalUsers;
+                document.getElementById('totalRecharge').textContent = d.totalRechargeAmount;
+                document.getElementById('totalConsume').textContent = d.totalConsumeAmount;
+                document.getElementById('todayTokens').textContent = d.todayTokenCount;
+                document.getElementById('todayChars').textContent = d.todayTranslateChars;
+            }
+        });
+    });
+</script>

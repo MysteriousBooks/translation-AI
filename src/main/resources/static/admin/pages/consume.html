@@ -1,0 +1,95 @@
+<div class="layui-fluid" style="padding:20px;">
+    <div class="layui-card">
+        <div class="layui-card-header">消耗流水</div>
+        <div class="layui-card-body">
+            <form class="layui-form" id="consumeSearchForm" lay-filter="consumeSearchForm">
+                <div class="layui-form-item">
+                    <div class="layui-inline">
+                        <label class="layui-form-label">用户ID</label>
+                        <div class="layui-input-inline">
+                            <input type="number" name="userId" placeholder="输入用户ID" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <label class="layui-form-label">类型</label>
+                        <div class="layui-input-inline">
+                            <select name="type">
+                                <option value="">全部</option>
+                                <option value="1">充值</option>
+                                <option value="2">消耗</option>
+                                <option value="3">退款</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-inline">
+                        <button class="layui-btn" lay-submit lay-filter="searchConsume"><i
+                                class="layui-icon layui-icon-search"></i> 搜索
+                        </button>
+                        <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                    </div>
+                </div>
+            </form>
+            <table id="consumeTable" lay-filter="consumeTable"></table>
+        </div>
+    </div>
+</div>
+
+<script>
+    layui.use(['table', 'form'], function () {
+        var table = layui.table;
+        var form = layui.form;
+
+        table.render({
+            elem: '#consumeTable',
+            url: '',
+            page: true,
+            limit: 10,
+            cols: [[
+                {field: 'id', title: 'ID', width: 70},
+                {field: 'userId', title: '用户ID', width: 90},
+                {
+                    field: 'type', title: '类型', width: 100, templet: function (d) {
+                        return WalletRecordTypeMap[d.type] || d.type;
+                    }
+                },
+                {field: 'amount', title: '金额(元)', width: 120},
+                {field: 'balanceBefore', title: '变动前余额(元)', width: 140},
+                {field: 'balanceAfter', title: '变动后余额(元)', width: 140},
+                {field: 'relatedOrderNo', title: '关联订单号', width: 200},
+                {field: 'description', title: '描述', minWidth: 180},
+                {field: 'createTime', title: '时间', width: 170}
+            ]]
+        });
+
+        function loadData(params) {
+            var p = {page: 1, size: 10};
+            if (params) Object.assign(p, params);
+            API.get('/api/admin/consume/list', p, function (res) {
+                if (res.code === 200) {
+                    table.reload('consumeTable', {
+                        data: res.data.records,
+                        page: {curr: res.data.current, limit: res.data.size, count: res.data.total}
+                    });
+                }
+            });
+        }
+
+        loadData();
+
+        form.on('submit(searchConsume)', function (data) {
+            loadData(data.field);
+            return false;
+        });
+
+        table.on('page(consumeTable)', function (obj) {
+            var formData = {};
+            var f = $('#consumeSearchForm').serializeArray();
+            for (var i = 0; i < f.length; i++) {
+                formData[f[i].name] = f[i].value;
+            }
+            formData.page = obj.curr;
+            formData.size = obj.limit;
+            loadData(formData);
+        });
+    });
+</script>

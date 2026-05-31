@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 登录</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.8/dist/css/layui.css">
+    <link rel="stylesheet" href="/admin/css/admin.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: #fff;
+            border-radius: 16px;
+            padding: 40px;
+            width: 400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, .15);
+        }
+
+        .login-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .login-title i {
+            font-size: 28px;
+            color: #667eea;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <div class="login-title"><i class="layui-icon layui-icon-translate"></i>AI翻译管理后台</div>
+    <form class="layui-form" id="loginForm">
+        <div class="layui-form-item">
+            <div class="layui-input-wrap">
+                <div class="layui-input-prefix"><i class="layui-icon layui-icon-username"></i></div>
+                <input type="text" name="username" lay-verify="required" lay-affix="clear" placeholder="用户名"
+                       autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-wrap">
+                <div class="layui-input-prefix"><i class="layui-icon layui-icon-password"></i></div>
+                <input type="password" name="password" lay-verify="required" placeholder="密码" autocomplete="off"
+                       class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <button type="button" class="layui-btn layui-btn-fluid layui-btn-normal" id="loginBtn">登 录</button>
+        </div>
+    </form>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/layui@2.9.8/dist/layui.js"></script>
+<script src="/admin/js/common.js"></script>
+<script>
+    layui.use(['form', 'layer'], function () {
+        var form = layui.form;
+        var layer = layui.layer;
+        var $ = layui.$;
+
+        $('#loginBtn').on('click', function () {
+            var username = $('input[name="username"]').val();
+            var password = $('input[name="password"]').val();
+            if (!username || !password) {
+                layer.msg('请输入用户名和密码', {icon: 5});
+                return;
+            }
+            $.ajax({
+                url: '/api/admin/auth/login',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({username: username, password: password}),
+                success: function (res) {
+                    if (res.code === 200) {
+                        localStorage.setItem('admin_token', res.data.token);
+                        localStorage.setItem('admin_id', res.data.adminId);
+                        localStorage.setItem('admin_nickname', res.data.nickname);
+                        window.location.href = '/admin/index.html';
+                    } else {
+                        layer.msg(res.msg || '登录失败', {icon: 5});
+                    }
+                },
+                error: function () {
+                    layer.msg('网络错误', {icon: 5});
+                }
+            });
+        });
+
+        $(document).on('keydown', function (e) {
+            if (e.keyCode === 13) $('#loginBtn').click();
+        });
+    });
+</script>
+</body>
+</html>
