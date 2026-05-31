@@ -1,0 +1,13 @@
+<view class="container">
+  <empty-state wx:if="{{isEmpty}}" text="暂无公告" />
+  <block wx:else>
+    <view class="notice-item card" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="onItemClick">
+      <text class="notice-title">{{item.title}}</text>
+      <view class="notice-footer">
+        <text class="notice-type">{{item.type === 1 ? '系统通知' : '公告'}}</text>
+        <text class="notice-time">{{item.timeStr}}</text>
+      </view>
+    </view>
+    <loading-more loading="{{loading}}" finished="{{finished}}" />
+  </block>
+</view>

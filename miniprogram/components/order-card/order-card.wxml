@@ -1,0 +1,10 @@
+<view class="order-card">
+  <view class="order-header">
+    <text class="order-no">{{orderNo}}</text>
+    <text class="order-status status-{{item.status}}">{{statusText}}</text>
+  </view>
+  <view class="order-body">
+    <text class="order-amount">¥{{amount}}</text>
+    <text class="order-time">{{createTime}}</text>
+  </view>
+</view>

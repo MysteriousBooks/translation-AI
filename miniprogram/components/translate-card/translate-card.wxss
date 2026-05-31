@@ -1,0 +1,41 @@
+.translate-card {
+  background-color: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 24rpx 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+.lang-pair {
+  font-size: 24rpx;
+  color: #4A90D9;
+  font-weight: 500;
+}
+.card-time {
+  font-size: 22rpx;
+  color: #999999;
+}
+.card-body {
+  display: flex;
+  flex-direction: column;
+}
+.source-text {
+  font-size: 28rpx;
+  color: #333333;
+  margin-bottom: 12rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.translated-text {
+  font-size: 26rpx;
+  color: #666666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

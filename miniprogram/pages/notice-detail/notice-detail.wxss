@@ -1,0 +1,31 @@
+.detail-card {
+  margin-bottom: 24rpx;
+}
+.detail-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333333;
+  display: block;
+  margin-bottom: 24rpx;
+}
+.detail-meta {
+  display: flex;
+  margin-bottom: 32rpx;
+  padding-bottom: 24rpx;
+  border-bottom: 1rpx solid #F0F0F0;
+}
+.detail-time {
+  font-size: 24rpx;
+  color: #999999;
+}
+.detail-content {
+  font-size: 28rpx;
+  color: #333333;
+  line-height: 1.8;
+}
+.empty-tip {
+  text-align: center;
+  padding: 120rpx;
+  color: #999999;
+  font-size: 28rpx;
+}

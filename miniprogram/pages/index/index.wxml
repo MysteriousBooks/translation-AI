@@ -1,0 +1,61 @@
+<view class="container">
+  <!-- 语言选择栏 -->
+  <view class="lang-bar">
+    <picker range="{{languageNames}}" value="{{sourceIndex}}" bindchange="onSourceLangChange">
+      <view class="lang-item">
+        <text>{{sourceLangName}}</text>
+        <text class="lang-arrow">▼</text>
+      </view>
+    </picker>
+    <view class="lang-swap" bindtap="onSwapLangs">
+      <text class="swap-icon">⇄</text>
+    </view>
+    <picker range="{{languageNames}}" value="{{targetIndex}}" bindchange="onTargetLangChange">
+      <view class="lang-item">
+        <text>{{targetLangName}}</text>
+        <text class="lang-arrow">▼</text>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 文本输入区域 -->
+  <view class="input-card card">
+    <textarea
+      class="translate-input"
+      placeholder="请输入要翻译的文本"
+      maxlength="{{maxChars}}"
+      value="{{sourceText}}"
+      bindinput="onInputChange"
+      auto-height
+      style="min-height: 200rpx"
+    />
+    <view class="input-footer">
+      <text class="char-count">{{charCount}}/{{maxChars}}</text>
+      <view wx:if="{{sourceText}}" class="clear-btn" bindtap="onClear">清空</view>
+    </view>
+  </view>
+
+  <!-- 翻译按钮 -->
+  <view class="btn-primary translate-btn" bindtap="onTranslate">
+    <text wx:if="{{!translating}}">翻  译</text>
+    <text wx:else>翻译中...</text>
+  </view>
+
+  <!-- 翻译结果 -->
+  <view wx:if="{{result}}" class="result-card card">
+    <view class="result-header">
+      <text class="result-title">翻译结果</text>
+    </view>
+    <view class="result-content">
+      <text>{{translatedText}}</text>
+    </view>
+    <view class="result-actions">
+      <view class="result-btn" bindtap="onCopyResult">
+        <text>复制</text>
+      </view>
+      <view class="result-btn" bindtap="onViewDetail">
+        <text>查看详情</text>
+      </view>
+    </view>
+  </view>
+</view>

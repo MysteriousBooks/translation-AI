@@ -1,0 +1,15 @@
+<view class="container" wx:if="{{notice}}">
+  <view class="detail-card card">
+    <text class="detail-title">{{notice.title}}</text>
+    <view class="detail-meta">
+      <text class="detail-time">{{notice.timeStr}}</text>
+    </view>
+    <view class="detail-content">
+      <text>{{notice.content}}</text>
+    </view>
+  </view>
+</view>
+
+<view class="container" wx:else>
+  <view class="empty-tip">加载中...</view>
+</view>

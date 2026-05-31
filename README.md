@@ -4,6 +4,8 @@
 
 ## 技术栈
 
+### 后端
+
 | 技术 | 版本 | 说明 |
 |------|------|------|
 | Java | 1.8 | 开发语言 |
@@ -18,6 +20,15 @@
 | Alipay SDK | 4.39.79 | 支付宝支付 |
 | Layui | 2.9.8 | 管理后台UI |
 
+### 微信小程序端
+
+| 技术 | 说明 |
+|------|------|
+| 原生微信小程序 | WXML/WXSS/JS，无第三方框架依赖 |
+| 微信登录 | wx.login 获取code，对接后端 /api/app/auth/login/wechat |
+| 微信支付 | 小程序支付（requestPayment），需后端适配小程序支付参数 |
+| 基础库 | > = 2.20.0 |
+
 ## 功能模块
 
 ### APP端
@@ -30,6 +41,16 @@
 | 钱包 | 余额查询、充值（支付宝/微信）、流水记录 |
 | 退款 | 申请退款 |
 | 其他 | 系统公告、意见反馈 |
+
+### 微信小程序端
+
+| 模块 | 功能 |
+|------|------|
+| 认证 | 微信授权登录、Token自动管理（401重新登录） |
+| 首页 | 多语言翻译（8种语言）、一键复制结果 |
+| 历史 | 翻译记录列表、下拉刷新、上拉加载更多 |
+| 钱包 | 余额展示、充值（微信支付）、交易流水 |
+| 个人 | 编辑资料、修改密码、意见反馈、公告通知 |
 
 ### 后台管理
 
@@ -114,6 +135,7 @@ java -jar target/translation-1.0.0.jar
 |------|------|
 | API文档 | http://localhost:8080/doc.html |
 | 管理后台 | http://localhost:8080/admin/login.html |
+| 微信小程序 | 使用微信开发者工具打开 `miniprogram/` 目录 |
 
 ### 默认管理员
 
@@ -122,6 +144,18 @@ java -jar target/translation-1.0.0.jar
 | admin | admin123 |
 
 > 生产环境请务必修改默认密码
+
+### 微信小程序配置
+
+1. 使用微信开发者工具打开 `miniprogram/` 目录
+
+2. 修改 `miniprogram/utils/constants.js` 中的 `BASE_URL` 为后端API地址
+
+3. 修改 `miniprogram/project.config.json` 中的 `appid` 为你的小程序 AppID
+
+4. 添加 TabBar 图标文件到 `miniprogram/images/` 目录（共8个PNG：4个默认态 + 4个选中态）
+
+5. 在微信公众平台配置后端API的服务器域名
 
 ## 数据库设计
 
@@ -143,6 +177,36 @@ java -jar target/translation-1.0.0.jar
 ## 项目结构
 
 ```
+miniprogram/                          # 微信小程序前端
+├── app.js                            # 小程序入口（初始化、登录检查）
+├── app.json                          # 全局配置（页面路由、tabBar、窗口样式）
+├── app.wxss                          # 全局样式
+├── project.config.json               # 项目配置
+├── sitemap.json                      # 站点地图
+├── utils/                            # 工具模块
+│   ├── request.js                    # 统一请求封装（JWT携带、错误处理、Token刷新）
+│   ├── auth.js                       # 认证模块（微信登录、Token存取）
+│   ├── util.js                       # 通用工具（日期格式化、金额格式化、文本截断）
+│   └── constants.js                  # 常量（API路径、状态码映射、语言选项）
+├── components/                       # 公共组件
+│   ├── empty-state/                  # 空状态提示
+│   ├── loading-more/                 # 上拉加载更多
+│   ├── translate-card/               # 翻译记录卡片
+│   └── order-card/                   # 充值订单卡片
+├── pages/
+│   ├── index/                        # 首页（翻译）
+│   ├── history/                      # 翻译历史
+│   ├── history-detail/               # 翻译详情
+│   ├── wallet/                       # 钱包（余额+充值+流水）
+│   ├── recharge/                    # 充值（选择金额+微信支付）
+│   ├── profile/                      # 个人中心
+│   ├── profile-edit/                 # 编辑个人信息
+│   ├── password/                     # 修改密码
+│   ├── feedback/                     # 意见反馈
+│   ├── notice-list/                  # 公告列表
+│   └── notice-detail/               # 公告详情
+└── images/                           # 图标和静态图片
+
 src/main/java/com/translation/
 ├── TranslationApplication.java
 ├── common/

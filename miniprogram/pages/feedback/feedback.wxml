@@ -1,0 +1,18 @@
+<view class="container">
+  <view class="card">
+    <textarea
+      class="feedback-input"
+      placeholder="请输入您的意见或建议"
+      value="{{content}}"
+      bindinput="onContentInput"
+      maxlength="500"
+      auto-height
+      style="min-height: 300rpx"
+    />
+    <view class="char-count">{{content.length}}/500</view>
+  </view>
+
+  <view class="btn-primary submit-btn {{submitting ? 'disabled' : ''}}" bindtap="{{submitting ? '' : 'onSubmit'}}">
+    {{submitting ? '提交中...' : '提交反馈'}}
+  </view>
+</view>

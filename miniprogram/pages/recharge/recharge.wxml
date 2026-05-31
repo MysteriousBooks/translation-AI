@@ -1,0 +1,41 @@
+<view class="container">
+  <!-- 余额显示 -->
+  <view class="balance-card card">
+    <text class="balance-label">当前余额</text>
+    <text class="balance-amount">¥{{balance}}</text>
+  </view>
+
+  <!-- 选择金额 -->
+  <view class="section-title">选择充值金额</view>
+  <view class="amount-grid">
+    <view
+      wx:for="{{amountOptions}}"
+      wx:key="*this"
+      class="amount-item {{selectedAmount === item && !customAmount ? 'active' : ''}}"
+      data-amount="{{item}}"
+      bindtap="onSelectAmount"
+    >
+      ¥{{item}}
+    </view>
+  </view>
+
+  <!-- 自定义金额 -->
+  <view class="custom-amount card">
+    <text class="custom-label">自定义金额</text>
+    <view class="custom-input-wrap">
+      <text class="custom-unit">¥</text>
+      <input
+        class="custom-input"
+        type="digit"
+        placeholder="请输入金额"
+        value="{{customAmount}}"
+        bindinput="onCustomInput"
+      />
+    </view>
+  </view>
+
+  <!-- 充值按钮 -->
+  <view class="btn-primary submit-btn {{submitting ? 'disabled' : ''}}" bindtap="{{submitting ? '' : 'onSubmit'}}">
+    {{submitting ? '提交中...' : '立即充值'}}
+  </view>
+</view>

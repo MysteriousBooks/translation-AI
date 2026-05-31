@@ -1,0 +1,47 @@
+<view class="container" wx:if="{{detail}}">
+  <!-- 语言对 -->
+  <view class="info-card card">
+    <view class="info-row">
+      <text class="info-label">语言对</text>
+      <text class="info-value">{{sourceLangName}} → {{targetLangName}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">状态</text>
+      <text class="info-value status-{{detail.status}}">{{statusText}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">时间</text>
+      <text class="info-value">{{createTime}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">字数</text>
+      <text class="info-value">{{charCount}} 字</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">费用</text>
+      <text class="info-value">¥{{costAmount}}</text>
+    </view>
+  </view>
+
+  <!-- 原文 -->
+  <view class="text-card card">
+    <view class="text-header">
+      <text class="text-title">原文</text>
+      <view class="copy-btn" bindtap="onCopySource">复制</view>
+    </view>
+    <text class="text-content">{{detail.sourceText}}</text>
+  </view>
+
+  <!-- 译文 -->
+  <view class="text-card card">
+    <view class="text-header">
+      <text class="text-title">译文</text>
+      <view class="copy-btn" bindtap="onCopyResult">复制</view>
+    </view>
+    <text class="text-content">{{detail.translatedText}}</text>
+  </view>
+
+  <view wx:if="{{detail.errorMsg}}" class="error-card card">
+    <text class="error-text">{{detail.errorMsg}}</text>
+  </view>
+</view>

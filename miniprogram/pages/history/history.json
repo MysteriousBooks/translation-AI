@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "翻译历史",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "translate-card": "/components/translate-card/translate-card",
+    "empty-state": "/components/empty-state/empty-state",
+    "loading-more": "/components/loading-more/loading-more"
+  }
+}

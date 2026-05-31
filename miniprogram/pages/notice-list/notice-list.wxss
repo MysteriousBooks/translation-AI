@@ -1,0 +1,29 @@
+.notice-item {
+  margin-bottom: 24rpx;
+}
+.notice-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #333333;
+  display: block;
+  margin-bottom: 16rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notice-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.notice-type {
+  font-size: 22rpx;
+  color: #4A90D9;
+  background-color: #EBF2FA;
+  padding: 4rpx 12rpx;
+  border-radius: 6rpx;
+}
+.notice-time {
+  font-size: 22rpx;
+  color: #999999;
+}

@@ -1,0 +1,16 @@
+<view class="container">
+  <empty-state wx:if="{{isEmpty}}" text="暂无翻译记录" />
+  <block wx:else>
+    <view class="translate-card" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="onItemClick">
+      <view class="card-header">
+        <text class="lang-pair">{{item.sourceLang}} → {{item.targetLang}}</text>
+        <text class="card-time">{{item.createTime}}</text>
+      </view>
+      <view class="card-body">
+        <view class="source-text">{{item.sourceText}}</view>
+        <view class="translated-text">{{item.translatedText}}</view>
+      </view>
+    </view>
+    <loading-more loading="{{loading}}" finished="{{finished}}" />
+  </block>
+</view>

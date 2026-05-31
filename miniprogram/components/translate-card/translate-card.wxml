@@ -1,0 +1,10 @@
+<view class="translate-card" bindtap="onCardClick">
+  <view class="card-header">
+    <text class="lang-pair">{{langPair}}</text>
+    <text class="card-time">{{createTime}}</text>
+  </view>
+  <view class="card-body">
+    <view class="source-text">{{sourceText}}</view>
+    <view class="translated-text">{{translatedText}}</view>
+  </view>
+</view>

@@ -1,0 +1,28 @@
+<view class="container">
+  <!-- 余额卡片 -->
+  <view class="balance-card card">
+    <view class="balance-label">账户余额</view>
+    <view class="balance-amount">¥{{balance}}</view>
+    <view class="balance-info">
+      <text class="balance-consume">累计消费 ¥{{totalConsume}}</text>
+    </view>
+    <view class="recharge-btn btn-primary" bindtap="onRecharge">充值</view>
+  </view>
+
+  <!-- 流水列表 -->
+  <view class="section-title">交易记录</view>
+  <empty-state wx:if="{{isEmpty}}" text="暂无交易记录" />
+  <block wx:else>
+    <view class="record-item card" wx:for="{{records}}" wx:key="id">
+      <view class="record-left">
+        <text class="record-type">{{item.typeText}}</text>
+        <text class="record-desc">{{item.description}}</text>
+        <text class="record-time">{{item.timeStr}}</text>
+      </view>
+      <view class="record-right {{item.type === 1 || item.type === 3 ? 'income' : 'expense'}}">
+        {{item.type === 1 || item.type === 3 ? '+' : '-'}}¥{{item.amountStr}}
+      </view>
+    </view>
+    <loading-more loading="{{loading}}" finished="{{finished}}" />
+  </block>
+</view>
