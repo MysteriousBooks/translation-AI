@@ -26,5 +26,7 @@ public interface UserService extends IService<User> {
 
     void sendVerifyCode(String email);
 
+    void sendVerifyCodeEmail(String email, String code);
+
     void updateUserBalance(Long userId, java.math.BigDecimal amount, String description, String orderNo, int type);
 }

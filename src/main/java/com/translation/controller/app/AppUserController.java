@@ -28,7 +28,7 @@ public class AppUserController {
 
     @ApiOperation("修改个人信息")
     @PutMapping("/info")
-    public Result<Void> updateUserInfo(@RequestBody UpdateUserDTO dto) {
+    public Result<Void> updateUserInfo(@Validated @RequestBody UpdateUserDTO dto) {
         userService.updateUserInfo(UserContext.getRequiredUserId(), dto);
         return Result.success();
     }

@@ -2,9 +2,11 @@ package com.translation.service.impl;
 
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.translation.common.constant.CommonConstant;
 import com.translation.common.enums.ResultCode;
 import com.translation.common.exception.BusinessException;
 import com.translation.common.utils.JwtUtil;
+import com.translation.common.utils.RedisUtil;
 import com.translation.dto.admin.AdminLoginDTO;
 import com.translation.entity.Admin;
 import com.translation.mapper.AdminMapper;
@@ -13,12 +15,15 @@ import com.translation.vo.admin.AdminLoginVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.TimeUnit;
+
 @Service
 @RequiredArgsConstructor
 public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements AdminService {
 
     private final AdminMapper adminMapper;
     private final JwtUtil jwtUtil;
+    private final RedisUtil redisUtil;
 
     @Override
     public AdminLoginVO login(AdminLoginDTO dto) {
@@ -36,6 +41,11 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
         }
 
         String token = jwtUtil.generateAdminToken(admin.getId());
+
+        /* 存储活跃Token，实现单端登录 */
+        String activeKey = CommonConstant.ADMIN_TOKEN_PREFIX + "active:" + admin.getId();
+        long expiration = jwtUtil.getAdminExpirationSeconds();
+        redisUtil.set(activeKey, token, expiration, TimeUnit.SECONDS);
 
         AdminLoginVO vo = new AdminLoginVO();
         vo.setToken(token);

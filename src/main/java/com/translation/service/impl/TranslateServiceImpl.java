@@ -2,11 +2,12 @@ package com.translation.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.extra.spring.SpringUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.translation.common.constant.CommonConstant;
 import com.translation.common.enums.ResultCode;
 import com.translation.common.enums.TranslateStatus;
 import com.translation.common.enums.WalletRecordType;
@@ -14,9 +15,7 @@ import com.translation.common.exception.BusinessException;
 import com.translation.common.utils.RedisUtil;
 import com.translation.dto.app.TranslateDTO;
 import com.translation.entity.TranslateRecord;
-import com.translation.entity.User;
 import com.translation.mapper.TranslateRecordMapper;
-import com.translation.mapper.UserMapper;
 import com.translation.service.SysConfigService;
 import com.translation.service.TokenStatisticsService;
 import com.translation.service.TranslateService;
@@ -41,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 public class TranslateServiceImpl extends ServiceImpl<TranslateRecordMapper, TranslateRecord> implements TranslateService {
 
     private final TranslateRecordMapper translateRecordMapper;
-    private final UserMapper userMapper;
+    private final UserService userService;
     private final SysConfigService sysConfigService;
     private final TokenStatisticsService tokenStatisticsService;
     private final RedisUtil redisUtil;
@@ -56,7 +55,6 @@ public class TranslateServiceImpl extends ServiceImpl<TranslateRecordMapper, Tra
     private String model;
 
     @Override
-    @Transactional
     public TranslateResultVO translate(Long userId, TranslateDTO dto) {
         /* 检查语言支持 */
         String supportedLanguages = sysConfigService.getConfigValue("supported_languages");
@@ -66,15 +64,6 @@ public class TranslateServiceImpl extends ServiceImpl<TranslateRecordMapper, Tra
                     !CollUtil.contains(Arrays.asList(langs), dto.getTargetLang())) {
                 throw new BusinessException(ResultCode.UNSUPPORTED_LANGUAGE);
             }
-        }
-
-        /* 检查用户状态 */
-        User user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BusinessException(ResultCode.USER_NOT_FOUND);
-        }
-        if (user.getStatus() == 0) {
-            throw new BusinessException(ResultCode.ACCOUNT_DISABLED);
         }
 
         /* 计算费用 */
@@ -88,18 +77,38 @@ public class TranslateServiceImpl extends ServiceImpl<TranslateRecordMapper, Tra
             costAmount = minConsume;
         }
 
-        /* 检查余额 */
-        if (user.getBalance().compareTo(costAmount) < 0) {
-            throw new BusinessException(ResultCode.BALANCE_NOT_ENOUGH);
-        }
-
         /* 翻译限流检查 */
-        String limitKey = "translate:limit:" + userId;
+        String limitKey = CommonConstant.TRANSLATE_LIMIT_PREFIX + userId;
         Long count = redisUtil.increment(limitKey, 1, 60, TimeUnit.SECONDS);
         if (count != null && count > 10) {
             throw new BusinessException("翻译请求过于频繁，请稍后再试");
         }
 
+        /* 调用LLM翻译（不持有事务连接，避免长事务） */
+        String translatedText = "";
+        String errorMsg = null;
+        int tokenCount = 0;
+        boolean success = false;
+
+        try {
+            LlmResult llmResult = callLlmApi(dto);
+            translatedText = llmResult.text;
+            tokenCount = llmResult.tokenCount;
+            success = true;
+        } catch (Exception e) {
+            log.error("翻译失败, userId: {}", userId, e);
+            errorMsg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+        }
+
+        /* 数据库操作放在事务内 */
+        return saveTranslateResult(userId, dto, charCount, costAmount, pricePerKchar,
+                translatedText, tokenCount, success, errorMsg);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public TranslateResultVO saveTranslateResult(Long userId, TranslateDTO dto, int charCount,
+            BigDecimal costAmount, BigDecimal pricePerKchar, String translatedText,
+            int tokenCount, boolean success, String errorMsg) {
         /* 创建翻译记录 */
         TranslateRecord record = new TranslateRecord();
         record.setUserId(userId);
@@ -109,37 +118,18 @@ public class TranslateServiceImpl extends ServiceImpl<TranslateRecordMapper, Tra
         record.setCharCount(charCount);
         record.setCostAmount(costAmount);
         record.setPricePerKchar(pricePerKchar);
-        record.setStatus(TranslateStatus.TRANSLATING.getCode());
-        translateRecordMapper.insert(record);
-
-        /* 调用LLM翻译 */
-        String translatedText = "";
-        String errorMsg = null;
-        int tokenCount = 0;
-        boolean success = false;
-
-        try {
-            String llmResponse = callLlmApi(dto);
-            translatedText = llmResponse;
-            success = true;
-
-            /* 扣除余额 */
-            String description = "翻译: " + dto.getSourceLang() + "->" + dto.getTargetLang() + ", " + charCount + "字符";
-            UserService userService = SpringUtil.getBean(UserService.class);
-            userService.updateUserBalance(userId, costAmount, description, null,
-                    WalletRecordType.CONSUME.getCode());
-
-        } catch (Exception e) {
-            log.error("翻译失败, userId: {}", userId, e);
-            errorMsg = e.getMessage();
-        }
-
-        /* 更新翻译记录 */
+        record.setStatus(success ? TranslateStatus.SUCCESS.getCode() : TranslateStatus.FAIL.getCode());
         record.setTranslatedText(translatedText);
         record.setTokenCount(tokenCount);
-        record.setStatus(success ? TranslateStatus.SUCCESS.getCode() : TranslateStatus.FAIL.getCode());
         record.setErrorMsg(errorMsg);
-        translateRecordMapper.updateById(record);
+        translateRecordMapper.insert(record);
+
+        /* 仅在翻译成功时扣除余额 */
+        if (success) {
+            String description = "翻译: " + dto.getSourceLang() + "->" + dto.getTargetLang() + ", " + charCount + "字符";
+            userService.updateUserBalance(userId, costAmount, description, null,
+                    WalletRecordType.CONSUME.getCode());
+        }
 
         /* 记录统计 */
         tokenStatisticsService.recordStatistics(tokenCount, charCount, costAmount, success);
@@ -169,7 +159,7 @@ public class TranslateServiceImpl extends ServiceImpl<TranslateRecordMapper, Tra
         return toVO(record);
     }
 
-    private String callLlmApi(TranslateDTO dto) {
+    private LlmResult callLlmApi(TranslateDTO dto) {
         String prompt = String.format(
                 "You are a professional translator. Translate the following text from %s to %s. " +
                         "Only output the translation result, nothing else.\n\n%s",
@@ -193,11 +183,49 @@ public class TranslateServiceImpl extends ServiceImpl<TranslateRecordMapper, Tra
                 .execute()
                 .body();
 
-        cn.hutool.json.JSONObject json = JSONUtil.parseObj(response);
-        return json.getJSONArray("choices")
-                .getJSONObject(0)
-                .getJSONObject("message")
-                .getStr("content");
+        if (StrUtil.isBlank(response)) {
+            throw new BusinessException("LLM 无响应");
+        }
+        cn.hutool.json.JSONObject json;
+        try {
+            json = JSONUtil.parseObj(response);
+        } catch (Exception e) {
+            throw new BusinessException("LLM 响应非 JSON 格式: " + response);
+        }
+        cn.hutool.json.JSONArray choices = json.getJSONArray("choices");
+        if (choices == null || choices.isEmpty()) {
+            throw new BusinessException("LLM 响应缺少 choices 字段: " + response);
+        }
+        cn.hutool.json.JSONObject first = choices.getJSONObject(0);
+        if (first == null) {
+            throw new BusinessException("LLM 响应 choices 为空");
+        }
+        cn.hutool.json.JSONObject msg = first.getJSONObject("message");
+        if (msg == null) {
+            throw new BusinessException("LLM 响应缺少 message 字段");
+        }
+        String content = msg.getStr("content");
+        if (StrUtil.isBlank(content)) {
+            throw new BusinessException("LLM 响应内容为空");
+        }
+
+        /* 提取token计数 */
+        int tokens = 0;
+        cn.hutool.json.JSONObject usage = json.getJSONObject("usage");
+        if (usage != null) {
+            tokens = usage.getInt("total_tokens", 0);
+        }
+
+        LlmResult result = new LlmResult();
+        result.text = content;
+        result.tokenCount = tokens;
+        return result;
+    }
+
+    /** LLM调用结果 */
+    private static class LlmResult {
+        String text;
+        int tokenCount;
     }
 
     private TranslateResultVO toVO(TranslateRecord record) {

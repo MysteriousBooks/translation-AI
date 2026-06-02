@@ -34,5 +34,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/admin/**")
                 .addResourceLocations("classpath:/static/admin/");
+        registry.addResourceHandler("/h5/**")
+                .addResourceLocations("classpath:/static/h5/");
     }
 }

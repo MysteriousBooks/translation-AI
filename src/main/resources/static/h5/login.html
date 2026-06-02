@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI翻译 - 登录</title>
+    <link rel="stylesheet" href="/h5/css/h5.css">
+</head>
+<body>
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-title">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                <path d="M5 8l6 6"/><path d="M4 14l6-6"/><path d="M2 5h6"/><path d="M2 19h6"/><path d="M14 4l4 8"/><path d="M22 4l-4 8"/>
+            </svg>AI翻译
+        </div>
+
+        <!-- 登录/注册 切换 -->
+        <div class="login-tabs" id="loginTabs">
+            <div class="login-tab active" data-tab="login" onclick="switchTab('login')">登录</div>
+            <div class="login-tab" data-tab="register" onclick="switchTab('register')">注册</div>
+        </div>
+
+        <!-- 登录表单 -->
+        <div id="loginForm" class="login-form">
+            <div class="h5-form-group">
+                <input type="email" id="loginEmail" class="h5-form-input" placeholder="请输入邮箱" autocomplete="email">
+            </div>
+            <div class="h5-form-group">
+                <input type="password" id="loginPassword" class="h5-form-input" placeholder="请输入密码" autocomplete="current-password">
+            </div>
+            <div class="h5-form-group">
+                <button class="h5-btn h5-btn-primary" id="loginBtn" onclick="doLogin()">登 录</button>
+            </div>
+            <div class="login-link">
+                <a href="javascript:void(0)" onclick="switchTab('forgot')">忘记密码？</a>
+            </div>
+        </div>
+
+        <!-- 注册表单 -->
+        <div id="registerForm" class="login-form" style="display:none;">
+            <div class="h5-form-group">
+                <input type="email" id="regEmail" class="h5-form-input" placeholder="请输入邮箱">
+            </div>
+            <div class="h5-form-group">
+                <div class="code-row">
+                    <input type="text" id="regCode" class="h5-form-input" placeholder="验证码" maxlength="6">
+                    <button class="h5-btn h5-btn-outline" id="sendCodeBtn" onclick="sendCode('reg')">获取验证码</button>
+                </div>
+            </div>
+            <div class="h5-form-group">
+                <input type="password" id="regPassword" class="h5-form-input" placeholder="请输入密码（6-20位）" maxlength="20">
+            </div>
+            <div class="h5-form-group">
+                <input type="text" id="regNickname" class="h5-form-input" placeholder="昵称（选填）" maxlength="64">
+            </div>
+            <div class="h5-form-group">
+                <button class="h5-btn h5-btn-primary" id="registerBtn" onclick="doRegister()">注 册</button>
+            </div>
+            <div class="login-link">
+                已有账号？<a href="javascript:void(0)" onclick="switchTab('login')">去登录</a>
+            </div>
+        </div>
+
+        <!-- 忘记密码表单 -->
+        <div id="forgotForm" class="login-form" style="display:none;">
+            <div class="h5-form-group">
+                <input type="email" id="forgotEmail" class="h5-form-input" placeholder="请输入邮箱">
+            </div>
+            <div class="h5-form-group">
+                <div class="code-row">
+                    <input type="text" id="forgotCode" class="h5-form-input" placeholder="验证码" maxlength="6">
+                    <button class="h5-btn h5-btn-outline" id="sendCodeBtnForgot" onclick="sendCode('forgot')">获取验证码</button>
+                </div>
+            </div>
+            <div class="h5-form-group">
+                <input type="password" id="forgotNewPassword" class="h5-form-input" placeholder="新密码（6-20位）" maxlength="20">
+            </div>
+            <div class="h5-form-group">
+                <button class="h5-btn h5-btn-primary" id="forgotBtn" onclick="doForgotPassword()">重置密码</button>
+            </div>
+            <div class="login-link">
+                <a href="javascript:void(0)" onclick="switchTab('login')">返回登录</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="/h5/js/common.js"></script>
+<script>
+/* 注意：API_BASE 和 H5.toast 定义在 common.js 中 */
+
+/* 切换Tab */
+function switchTab(tab) {
+    document.querySelectorAll('.login-tab').forEach(function (t) {
+        t.classList.toggle('active', t.dataset.tab === (tab === 'forgot' ? 'login' : tab));
+    });
+    document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+    document.getElementById('forgotForm').style.display = tab === 'forgot' ? 'block' : 'none';
+}
+
+/* 邮箱登录 */
+function doLogin() {
+    var email = $('#loginEmail').val().trim();
+    var password = $('#loginPassword').val();
+    if (!email) { showToast('请输入邮箱'); return; }
+    if (!password) { showToast('请输入密码'); return; }
+    $('#loginBtn').prop('disabled', true).text('登录中...');
+    $.ajax({
+        url: API_BASE + '/auth/login/email',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({email: email, password: password}),
+        success: function (res) {
+            $('#loginBtn').prop('disabled', false).text('登 录');
+            if (res && res.code === 200 && res.data && res.data.token) {
+                localStorage.setItem('h5_token', res.data.token);
+                localStorage.setItem('h5_user_id', res.data.userId || '');
+                localStorage.setItem('h5_nickname', res.data.nickname || '');
+                window.location.href = '/h5/index.html';
+            } else {
+                showToast(res.msg || '登录失败');
+            }
+        },
+        error: function () {
+            $('#loginBtn').prop('disabled', false).text('登 录');
+            showToast('网络错误，请稍后重试');
+        }
+    });
+}
+
+/* 注册 */
+function doRegister() {
+    var email = $('#regEmail').val().trim();
+    var code = $('#regCode').val().trim();
+    var password = $('#regPassword').val();
+    var nickname = $('#regNickname').val().trim();
+    if (!email) { showToast('请输入邮箱'); return; }
+    if (!code) { showToast('请输入验证码'); return; }
+    if (!password || password.length < 6) { showToast('密码至少6位'); return; }
+    $('#registerBtn').prop('disabled', true).text('注册中...');
+    $.ajax({
+        url: API_BASE + '/auth/register',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({email: email, password: password, code: code, nickname: nickname || null}),
+        success: function (res) {
+            $('#registerBtn').prop('disabled', false).text('注 册');
+            if (res && res.code === 200 && res.data && res.data.token) {
+                localStorage.setItem('h5_token', res.data.token);
+                localStorage.setItem('h5_user_id', res.data.userId || '');
+                localStorage.setItem('h5_nickname', res.data.nickname || '');
+                showToast('注册成功');
+                setTimeout(function () { window.location.href = '/h5/index.html'; }, 500);
+            } else {
+                showToast(res.msg || '注册失败');
+            }
+        },
+        error: function () {
+            $('#registerBtn').prop('disabled', false).text('注 册');
+            showToast('网络错误，请稍后重试');
+        }
+    });
+}
+
+/* 忘记密码 */
+function doForgotPassword() {
+    var email = $('#forgotEmail').val().trim();
+    var code = $('#forgotCode').val().trim();
+    var newPassword = $('#forgotNewPassword').val();
+    if (!email) { showToast('请输入邮箱'); return; }
+    if (!code) { showToast('请输入验证码'); return; }
+    if (!newPassword || newPassword.length < 6) { showToast('密码至少6位'); return; }
+    $('#forgotBtn').prop('disabled', true).text('提交中...');
+    $.ajax({
+        url: API_BASE + '/auth/forgot-password',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({email: email, code: code, newPassword: newPassword}),
+        success: function (res) {
+            $('#forgotBtn').prop('disabled', false).text('重置密码');
+            if (res.code === 200) {
+                showToast('密码重置成功，请重新登录');
+                setTimeout(function () { switchTab('login'); }, 1000);
+            } else {
+                showToast(res.msg || '重置失败');
+            }
+        },
+        error: function () {
+            $('#forgotBtn').prop('disabled', false).text('重置密码');
+            showToast('网络错误，请稍后重试');
+        }
+    });
+}
+
+/* 发送验证码 */
+function sendCode(type) {
+    var email = type === 'reg' ? $('#regEmail').val().trim() : $('#forgotEmail').val().trim();
+    if (!email) { showToast('请输入邮箱'); return; }
+    var btnId = type === 'reg' ? '#sendCodeBtn' : '#sendCodeBtnForgot';
+    var btn = $(btnId);
+    if (btn.prop('disabled')) return;
+    btn.prop('disabled', true);
+    $.ajax({
+        url: API_BASE + '/auth/send-code',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({email: email}),
+        success: function (res) {
+            if (res.code === 200) {
+                showToast('验证码已发送');
+                var count = 60;
+                /* 每次发送前先清除可能残留的旧 timer，再覆盖到按钮对应的属性上 */
+                if (btn.data('timer')) {
+                    clearInterval(btn.data('timer'));
+                }
+                var timer = setInterval(function () {
+                    count--;
+                    if (count <= 0) {
+                        clearInterval(timer);
+                        btn.removeData('timer');
+                        btn.prop('disabled', false).text('获取验证码');
+                    } else {
+                        btn.text(count + '秒后重试');
+                    }
+                }, 1000);
+                btn.data('timer', timer);
+            } else {
+                btn.prop('disabled', false);
+                showToast(res.msg || '发送失败');
+            }
+        },
+        error: function () {
+            btn.prop('disabled', false);
+            showToast('网络错误');
+        }
+    });
+}
+
+/* Toast提示 */
+function showToast(msg) { H5.toast(msg); }
+
+/* 回车登录 */
+$(document).on('keydown', '#loginEmail, #loginPassword', function (e) {
+    if (e.keyCode === 13) doLogin();
+});
+
+/* 登录页清除旧token，避免过期token导致 login→index→login 重定向循环 */
+localStorage.removeItem('h5_token');
+localStorage.removeItem('h5_user_id');
+localStorage.removeItem('h5_nickname');
+
+/* 401/Token失效统一处理（避免回调链中重复触发跳转） */
+function handleUnauthorized() {
+    if (window._h5UnauthHandled) return;
+    window._h5UnauthHandled = true;
+    localStorage.removeItem('h5_token');
+    localStorage.removeItem('h5_user_id');
+    localStorage.removeItem('h5_nickname');
+    window.location.href = '/h5/login.html';
+}
+</script>
+</body>
+</html>

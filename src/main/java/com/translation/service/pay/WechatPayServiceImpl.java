@@ -152,7 +152,8 @@ public class WechatPayServiceImpl implements PayService {
 
             JSONObject respJson = JSONUtil.parseObj(response);
             String tradeState = respJson.getStr("trade_state");
-            return "SUCCESS".equals(tradeState) || "CLOSED".equals(tradeState);
+            /* CLOSED 状态表示订单已关闭（未支付或已退款），不应视为成功 */
+            return "SUCCESS".equals(tradeState);
         } catch (Exception e) {
             log.error("微信支付查询订单状态异常", e);
             return false;
@@ -188,7 +189,7 @@ public class WechatPayServiceImpl implements PayService {
      */
     private String signWithPrivateKey(String message) {
         try {
-            PrivateKey privateKey = loadPrivateKey();
+            PrivateKey privateKey = getCachedPrivateKey();
             Signature signature = Signature.getInstance("SHA256withRSA");
             signature.initSign(privateKey);
             signature.update(message.getBytes(StandardCharsets.UTF_8));
@@ -197,6 +198,25 @@ public class WechatPayServiceImpl implements PayService {
             log.error("微信支付签名失败", e);
             throw new RuntimeException("微信支付签名失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 缓存的私钥，避免每次签名都从文件 IO 读取
+     */
+    private volatile PrivateKey cachedPrivateKey;
+
+    private PrivateKey getCachedPrivateKey() throws Exception {
+        PrivateKey pk = cachedPrivateKey;
+        if (pk == null) {
+            synchronized (this) {
+                pk = cachedPrivateKey;
+                if (pk == null) {
+                    pk = loadPrivateKey();
+                    cachedPrivateKey = pk;
+                }
+            }
+        }
+        return pk;
     }
 
     /**

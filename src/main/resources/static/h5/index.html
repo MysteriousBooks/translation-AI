@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI翻译</title>
+    <link rel="stylesheet" href="/h5/css/h5.css">
+</head>
+<body>
+<!-- 顶部导航 -->
+<div class="h5-header">
+    <div class="h5-header-title">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l6 6"/><path d="M4 14l6-6"/><path d="M2 5h6"/><path d="M2 19h6"/><path d="M14 4l4 8"/><path d="M22 4l-4 8"/></svg>
+        AI翻译
+    </div>
+    <div class="h5-header-actions">
+        <span id="nicknameDisplay" style="font-size:13px;opacity:0.9;"></span>
+        <button class="h5-header-btn" onclick="H5.logout()">退出</button>
+    </div>
+</div>
+
+<!-- PC端侧边栏+主内容布局 -->
+<div class="h5-pc-layout" id="pcLayout" style="display:none;"></div>
+
+<!-- 移动端内容区 -->
+<div id="mobileContent">
+    <div class="h5-container">
+        <div id="mobileTranslateArea"></div>
+    </div>
+</div>
+
+<!-- 移动端底部TabBar -->
+<div id="mobileTabbar"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="/h5/js/common.js"></script>
+<script>
+H5.checkAuth();
+
+var currentContainerId = '';
+var prevIsMobile = null;
+var isTranslating = false;
+
+/* 响应式布局切换 */
+function initLayout() {
+    var isMobile = window.innerWidth < 768;
+    var pcLayout = document.getElementById('pcLayout');
+    var mobileContent = document.getElementById('mobileContent');
+    var mobileTabbar = document.getElementById('mobileTabbar');
+
+    /* 仅在布局模式改变时重建UI，否则不丢失用户输入 */
+    if (prevIsMobile === isMobile) return;
+    prevIsMobile = isMobile;
+
+    if (isMobile) {
+        pcLayout.style.display = 'none';
+        mobileContent.style.display = 'block';
+        currentContainerId = 'mobileTranslateArea';
+        mobileTabbar.innerHTML = '';
+        mobileTabbar.id = 'mobileTabbar';
+        mobileTabbar.innerHTML = renderTabbar(0);
+    } else {
+        pcLayout.style.display = 'flex';
+        mobileContent.style.display = 'none';
+        mobileTabbar.innerHTML = '';
+        currentContainerId = 'pcTranslateArea';
+        pcLayout.innerHTML = renderSidebar(0) + '<div class="h5-pc-main"><div id="pcTranslateArea"></div></div>';
+    }
+    renderTranslateUI(currentContainerId);
+}
+
+/* 翻译UI */
+function renderTranslateUI(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var langOptions = '';
+    for (var key in LangMap) {
+        langOptions += '<option value="' + key + '">' + LangMap[key] + '</option>';
+    }
+    container.innerHTML = '<div class="h5-card">' +
+        '<div class="h5-card-header">文本翻译</div>' +
+        '<div class="h5-card-body">' +
+            '<div class="lang-row">' +
+                '<select id="sourceLang" class="h5-form-select">' + langOptions + '</select>' +
+                '<button class="lang-swap-btn" onclick="swapLangs()" title="交换语言">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16l-4-4 4-4"/><path d="M17 8l4 4-4 4"/><line x1="3" y1="12" x2="21" y2="12"/></svg>' +
+                '</button>' +
+                '<select id="targetLang" class="h5-form-select">' + langOptions + '</select>' +
+            '</div>' +
+            '<div class="h5-form-group">' +
+                '<textarea id="sourceText" class="h5-form-textarea" placeholder="请输入要翻译的文本..." maxlength="5000"></textarea>' +
+                '<div style="text-align:right;font-size:12px;color:#888;margin-top:4px;"><span id="charCount">0</span>/5000</div>' +
+            '</div>' +
+            '<button class="h5-btn h5-btn-primary" id="translateBtn" onclick="doTranslate()">翻 译</button>' +
+            '<div id="translateResult" style="display:none;"></div>' +
+        '</div>' +
+    '</div>';
+
+    document.getElementById('sourceLang').value = 'zh-CN';
+    document.getElementById('targetLang').value = 'en';
+    document.getElementById('sourceText').addEventListener('input', function () {
+        document.getElementById('charCount').textContent = this.value.length;
+    });
+}
+
+/* 交换语言 */
+function swapLangs() {
+    var sourceEl = document.getElementById('sourceLang');
+    var targetEl = document.getElementById('targetLang');
+    var temp = sourceEl.value;
+    sourceEl.value = targetEl.value;
+    targetEl.value = temp;
+}
+
+/* 执行翻译 */
+function doTranslate() {
+    if (isTranslating) return;
+    var sourceLang = document.getElementById('sourceLang').value;
+    var targetLang = document.getElementById('targetLang').value;
+    var sourceText = document.getElementById('sourceText').value.trim();
+    if (!sourceText) { H5.toast('请输入要翻译的文本'); return; }
+    var btn = document.getElementById('translateBtn');
+    btn.disabled = true;
+    isTranslating = true;
+    btn.textContent = '翻译中...';
+    H5.post('/translate', {sourceLang: sourceLang, targetLang: targetLang, sourceText: sourceText}, function (res) {
+        btn.disabled = false;
+        isTranslating = false;
+        btn.textContent = '翻 译';
+        if (!res) return;
+        if (res.code === 200) {
+            var d = res.data;
+            var statusClass = d.status === 1 ? 'status-success' : (d.status === 2 ? 'status-failed' : 'status-translating');
+            var statusText = TranslateStatusMap[d.status] || '未知';
+            var sourceLangName = LangMap[sourceLang] || escapeHtml(sourceLang);
+            var targetLangName = LangMap[targetLang] || escapeHtml(targetLang);
+            var resultHtml = '<div class="translate-result">' +
+                '<div class="translate-result-header">' +
+                    '<span>' + sourceLangName + ' → ' + targetLangName + '</span>' +
+                    '<span class="history-item-status ' + statusClass + '">' + escapeHtml(statusText) + '</span>' +
+                '</div>' +
+                '<div class="translate-result-text">' + escapeHtml(d.translatedText || '翻译中...') + '</div>' +
+                (d.status === 1 ? '<div class="translate-result-actions">' +
+                    '<button class="h5-btn h5-btn-outline h5-btn-sm" onclick="copyText()">复制译文</button>' +
+                    '<span style="font-size:12px;color:#888;line-height:32px;margin-left:8px;">' + escapeHtml(String(d.charCount)) + '字符 · ¥' + H5.formatMoney(d.costAmount) + '</span>' +
+                '</div>' : '') +
+            '</div>';
+            document.getElementById('translateResult').innerHTML = resultHtml;
+            document.getElementById('translateResult').style.display = 'block';
+        } else {
+            H5.toast(res.msg || '翻译失败');
+        }
+    });
+}
+
+/* 复制译文 */
+function copyText() {
+    var textEl = document.querySelector('.translate-result-text');
+    if (textEl) {
+        navigator.clipboard.writeText(textEl.textContent).then(function () {
+            H5.toast('已复制');
+        }).catch(function () {
+            H5.toast('复制失败');
+        });
+    }
+}
+
+/* 显示昵称 */
+document.getElementById('nicknameDisplay').textContent = localStorage.getItem('h5_nickname') || '用户';
+
+/* 初始化 */
+initLayout();
+window.addEventListener('resize', function () {
+    clearTimeout(window._resizeTimer);
+    window._resizeTimer = setTimeout(initLayout, 200);
+});
+</script>
+</body>
+</html>

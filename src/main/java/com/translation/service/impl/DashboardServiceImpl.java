@@ -1,9 +1,11 @@
 package com.translation.service.impl;
 
+import com.translation.common.enums.OrderStatus;
 import com.translation.entity.Order;
 import com.translation.entity.TokenStatistics;
-import com.translation.entity.TranslateRecord;
 import com.translation.entity.User;
+import com.translation.mapper.OrderMapper;
+import com.translation.mapper.UserMapper;
 import com.translation.service.*;
 import com.translation.vo.admin.DashboardVO;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +15,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +24,8 @@ public class DashboardServiceImpl implements DashboardService {
     private final OrderService orderService;
     private final TranslateService translateService;
     private final TokenStatisticsService tokenStatisticsService;
+    private final OrderMapper orderMapper;
+    private final UserMapper userMapper;
 
     @Override
     public DashboardVO getOverview() {
@@ -45,8 +48,8 @@ public class DashboardServiceImpl implements DashboardService {
 
         /* 今日翻译次数 */
         long todayTranslateCount = translateService.lambdaQuery()
-                .ge(TranslateRecord::getCreateTime, todayStart)
-                .le(TranslateRecord::getCreateTime, todayEnd)
+                .ge(com.translation.entity.TranslateRecord::getCreateTime, todayStart)
+                .le(com.translation.entity.TranslateRecord::getCreateTime, todayEnd)
                 .count();
         vo.setTodayTranslateCount((int) todayTranslateCount);
 
@@ -64,33 +67,17 @@ public class DashboardServiceImpl implements DashboardService {
             vo.setTodayTokenCount(0);
         }
 
-        /* 今日充值金额 */
-        List<Order> todayPaidOrders = orderService.lambdaQuery()
-                .eq(Order::getStatus, 1)
-                .ge(Order::getPayTime, todayStart)
-                .le(Order::getPayTime, todayEnd)
-                .select(Order::getAmount)
-                .list();
-        vo.setTodayRechargeAmount(todayPaidOrders.stream()
-                .map(Order::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        /* 今日充值金额 - 使用SQL聚合避免全表加载 */
+        BigDecimal todayRecharge = orderMapper.sumPaidAmountByTimeRange(OrderStatus.PAID.getCode(), todayStart, todayEnd);
+        vo.setTodayRechargeAmount(todayRecharge);
 
-        /* 总充值金额 */
-        List<Order> allPaidOrders = orderService.lambdaQuery()
-                .eq(Order::getStatus, 1)
-                .select(Order::getAmount)
-                .list();
-        vo.setTotalRechargeAmount(allPaidOrders.stream()
-                .map(Order::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        /* 总充值金额 - 使用SQL聚合避免全表加载 */
+        BigDecimal totalRecharge = orderMapper.sumPaidAmount(OrderStatus.PAID.getCode());
+        vo.setTotalRechargeAmount(totalRecharge);
 
-        /* 总消耗金额 */
-        List<User> users = userService.lambdaQuery()
-                .select(User::getTotalConsume)
-                .list();
-        vo.setTotalConsumeAmount(users.stream()
-                .map(User::getTotalConsume)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        /* 总消耗金额 - 使用SQL聚合避免全表加载 */
+        BigDecimal totalConsume = userMapper.sumTotalConsume();
+        vo.setTotalConsumeAmount(totalConsume);
 
         return vo;
     }

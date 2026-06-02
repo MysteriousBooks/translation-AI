@@ -89,6 +89,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional
     public void handleAlipayCallback(Map<String, String> params) {
+        if (params == null) {
+            log.error("支付宝回调参数为空");
+            return;
+        }
         if (!alipayService.verifyCallback(params)) {
             log.error("支付宝回调签名验证失败");
             return;
@@ -98,17 +102,23 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         String transactionId = params.get("trade_no");
         String tradeStatus = params.get("trade_status");
 
+        if (StrUtil.isBlank(orderNo) || StrUtil.isBlank(tradeStatus)) {
+            log.error("支付宝回调缺少关键字段: orderNo={}, tradeStatus={}", orderNo, tradeStatus);
+            return;
+        }
+
         if (!"TRADE_SUCCESS".equals(tradeStatus) && !"TRADE_FINISHED".equals(tradeStatus)) {
             log.info("支付宝回调非成功状态: {}", tradeStatus);
             return;
         }
 
-        Order order = lambdaQuery().eq(Order::getOrderNo, orderNo).one();
+        Order order = orderMapper.selectOrderByNoForUpdate(orderNo);
         if (order == null) {
             log.error("支付宝回调订单不存在: {}", orderNo);
             return;
         }
         if (order.getStatus() != OrderStatus.PENDING.getCode()) {
+            log.info("订单已处理，跳过: orderNo={}, status={}", orderNo, order.getStatus());
             return;
         }
 
@@ -117,13 +127,23 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setTransactionId(transactionId);
         orderMapper.updateById(order);
 
-        userService.updateUserBalance(order.getUserId(), order.getAmount(),
-                "充值", order.getOrderNo(), WalletRecordType.RECHARGE.getCode());
+        try {
+            userService.updateUserBalance(order.getUserId(), order.getAmount(),
+                    "充值", order.getOrderNo(), WalletRecordType.RECHARGE.getCode());
+        } catch (Exception e) {
+            log.error("充值入账失败，回滚订单状态: orderNo={}", orderNo, e);
+            /* 抛出异常触发事务回滚，订单回退为 PENDING，等待支付宝下次重试 */
+            throw e;
+        }
     }
 
     @Override
     @Transactional
     public void handleWechatCallback(Map<String, String> params) {
+        if (params == null) {
+            log.error("微信回调参数为空");
+            return;
+        }
         if (!wechatPayService.verifyCallback(params)) {
             log.error("微信回调签名验证失败");
             return;
@@ -135,6 +155,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             return;
         }
 
+        String orderNo;
+        String transactionId;
         try {
             cn.hutool.json.JSONObject bodyJson = cn.hutool.json.JSONUtil.parseObj(body);
             if (!bodyJson.containsKey("resource")) {
@@ -157,33 +179,46 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             }
 
             cn.hutool.json.JSONObject decryptedJson = cn.hutool.json.JSONUtil.parseObj(decrypted);
-            String orderNo = decryptedJson.getStr("out_trade_no");
-            String transactionId = decryptedJson.getStr("transaction_id");
+            orderNo = decryptedJson.getStr("out_trade_no");
+            transactionId = decryptedJson.getStr("transaction_id");
             String tradeState = decryptedJson.getStr("trade_state");
+
+            if (StrUtil.isBlank(orderNo) || StrUtil.isBlank(tradeState)) {
+                log.error("微信回调解密数据缺少关键字段: orderNo={}, tradeState={}", orderNo, tradeState);
+                return;
+            }
 
             if (!"SUCCESS".equals(tradeState)) {
                 log.info("微信回调非成功状态: {}", tradeState);
                 return;
             }
+        } catch (Exception e) {
+            /* 业务异常必须抛出，触发事务回滚和返回非200响应，让微信重试 */
+            log.error("微信回调数据解析失败", e);
+            throw new BusinessException("微信回调解析失败");
+        }
 
-            Order order = lambdaQuery().eq(Order::getOrderNo, orderNo).one();
-            if (order == null) {
-                log.error("微信回调订单不存在: {}", orderNo);
-                return;
-            }
-            if (order.getStatus() != OrderStatus.PENDING.getCode()) {
-                return;
-            }
+        Order order = orderMapper.selectOrderByNoForUpdate(orderNo);
+        if (order == null) {
+            log.error("微信回调订单不存在: {}", orderNo);
+            return;
+        }
+        if (order.getStatus() != OrderStatus.PENDING.getCode()) {
+            log.info("订单已处理，跳过: orderNo={}, status={}", orderNo, order.getStatus());
+            return;
+        }
 
-            order.setStatus(OrderStatus.PAID.getCode());
-            order.setPayTime(LocalDateTime.now());
-            order.setTransactionId(transactionId);
-            orderMapper.updateById(order);
+        order.setStatus(OrderStatus.PAID.getCode());
+        order.setPayTime(LocalDateTime.now());
+        order.setTransactionId(transactionId);
+        orderMapper.updateById(order);
 
+        try {
             userService.updateUserBalance(order.getUserId(), order.getAmount(),
                     "充值", order.getOrderNo(), WalletRecordType.RECHARGE.getCode());
         } catch (Exception e) {
-            log.error("微信回调处理异常", e);
+            log.error("充值入账失败，回滚订单状态: orderNo={}", orderNo, e);
+            throw e;
         }
     }
 
@@ -226,8 +261,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         Page<Order> pageParam = new Page<>(page, size);
         Page<Order> result = orderMapper.selectPage(pageParam, wrapper);
 
+        /* 批量查询用户信息，避免N+1问题 */
+        java.util.Set<Long> userIds = result.getRecords().stream()
+                .map(Order::getUserId)
+                .collect(java.util.stream.Collectors.toSet());
+        java.util.Map<Long, User> userMap = userIds.isEmpty()
+                ? java.util.Collections.emptyMap()
+                : userMapper.selectBatchIds(userIds).stream()
+                .collect(java.util.stream.Collectors.toMap(User::getId, u -> u));
+
         Page<AdminOrderVO> voPage = new Page<>(result.getCurrent(), result.getSize(), result.getTotal());
-        voPage.setRecords(result.getRecords().stream().map(this::toAdminOrderVO).collect(Collectors.toList()));
+        voPage.setRecords(result.getRecords().stream()
+                .map(o -> toAdminOrderVO(o, userMap))
+                .collect(Collectors.toList()));
         return voPage;
     }
 
@@ -246,15 +292,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         return vo;
     }
 
-    private AdminOrderVO toAdminOrderVO(Order order) {
+    private AdminOrderVO toAdminOrderVO(Order order, java.util.Map<Long, User> userMap) {
         AdminOrderVO vo = new AdminOrderVO();
         BeanUtil.copyProperties(order, vo);
 
-        User user = userMapper.selectById(order.getUserId());
+        User user = userMap.get(order.getUserId());
         if (user != null) {
             vo.setUserEmail(user.getEmail());
             vo.setUserNickname(user.getNickname());
         }
         return vo;
+    }
+
+    private AdminOrderVO toAdminOrderVO(Order order) {
+        return toAdminOrderVO(order, java.util.Collections.emptyMap());
     }
 }

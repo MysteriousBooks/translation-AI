@@ -36,7 +36,8 @@ public class RefundServiceImpl extends ServiceImpl<RefundRecordMapper, RefundRec
     @Override
     @Transactional
     public void applyRefund(Long userId, RefundApplyDTO dto) {
-        Order order = orderMapper.selectById(dto.getOrderId());
+        /* 使用行锁查询订单，避免并发申请退款 */
+        Order order = orderMapper.selectOrderForUpdate(dto.getOrderId());
         if (order == null || !order.getUserId().equals(userId)) {
             throw new BusinessException(ResultCode.ORDER_NOT_FOUND);
         }
@@ -44,7 +45,7 @@ public class RefundServiceImpl extends ServiceImpl<RefundRecordMapper, RefundRec
             throw new BusinessException(ResultCode.ORDER_STATUS_ERROR);
         }
 
-        /* 检查是否已申请退款 */
+        /* 检查是否已申请退款（带行锁范围内的检查） */
         long count = lambdaQuery()
                 .eq(RefundRecord::getOrderId, dto.getOrderId())
                 .ne(RefundRecord::getStatus, RefundStatus.REJECTED.getCode())
@@ -70,7 +71,8 @@ public class RefundServiceImpl extends ServiceImpl<RefundRecordMapper, RefundRec
     @Override
     @Transactional
     public void approveRefund(Long refundId, Long adminId, String auditRemark) {
-        RefundRecord record = refundRecordMapper.selectById(refundId);
+        /* 使用行锁查询退款记录，避免并发审核 */
+        RefundRecord record = refundRecordMapper.selectRefundForUpdate(refundId);
         if (record == null) {
             throw new BusinessException(ResultCode.REFUND_NOT_FOUND);
         }
@@ -78,21 +80,17 @@ public class RefundServiceImpl extends ServiceImpl<RefundRecordMapper, RefundRec
             throw new BusinessException("退款记录状态不允许审核");
         }
 
-        record.setStatus(RefundStatus.APPROVED.getCode());
+        /* 先执行退款 - 退款成功后再更新状态 */
+        userService.updateUserBalance(record.getUserId(), record.getAmount(),
+                "退款", record.getRefundNo(), WalletRecordType.REFUND.getCode());
+
+        record.setStatus(RefundStatus.COMPLETED.getCode());
         record.setAdminId(adminId);
         record.setAuditRemark(auditRemark);
         refundRecordMapper.updateById(record);
 
-        /* 执行退款 - 扣除用户余额 */
-        userService.updateUserBalance(record.getUserId(), record.getAmount(),
-                "退款", record.getRefundNo(), WalletRecordType.REFUND.getCode());
-
-        /* 更新退款状态为已完成 */
-        record.setStatus(RefundStatus.COMPLETED.getCode());
-        refundRecordMapper.updateById(record);
-
         Order order = orderMapper.selectById(record.getOrderId());
-        if (order != null) {
+        if (order != null && order.getStatus() != OrderStatus.REFUNDED.getCode()) {
             order.setStatus(OrderStatus.REFUNDED.getCode());
             orderMapper.updateById(order);
         }
@@ -101,7 +99,7 @@ public class RefundServiceImpl extends ServiceImpl<RefundRecordMapper, RefundRec
     @Override
     @Transactional
     public void rejectRefund(Long refundId, Long adminId, String auditRemark) {
-        RefundRecord record = refundRecordMapper.selectById(refundId);
+        RefundRecord record = refundRecordMapper.selectRefundForUpdate(refundId);
         if (record == null) {
             throw new BusinessException(ResultCode.REFUND_NOT_FOUND);
         }
@@ -133,24 +131,38 @@ public class RefundServiceImpl extends ServiceImpl<RefundRecordMapper, RefundRec
         Page<RefundRecord> pageParam = new Page<>(page, size);
         Page<RefundRecord> result = refundRecordMapper.selectPage(pageParam, wrapper);
 
+        /* 批量查询关联数据，避免N+1问题 */
+        java.util.Set<Long> orderIds = new java.util.HashSet<>();
+        java.util.Set<Long> userIds = new java.util.HashSet<>();
+        for (RefundRecord r : result.getRecords()) {
+            orderIds.add(r.getOrderId());
+            userIds.add(r.getUserId());
+        }
+        java.util.Map<Long, Order> orderMap = orderMapper.selectBatchIds(orderIds)
+                .stream().collect(java.util.stream.Collectors.toMap(Order::getId, o -> o));
+        java.util.Map<Long, User> userMap = userMapper.selectBatchIds(userIds)
+                .stream().collect(java.util.stream.Collectors.toMap(User::getId, u -> u));
+
         Page<AdminRefundVO> voPage = new Page<>(result.getCurrent(), result.getSize(), result.getTotal());
-        voPage.setRecords(result.getRecords().stream().map(this::toVO).collect(java.util.stream.Collectors.toList()));
+        voPage.setRecords(result.getRecords().stream()
+                .map(r -> toVO(r, orderMap, userMap))
+                .collect(java.util.stream.Collectors.toList()));
         return voPage;
     }
 
-    private AdminRefundVO toVO(RefundRecord record) {
+    private AdminRefundVO toVO(RefundRecord record, java.util.Map<Long, Order> orderMap, java.util.Map<Long, User> userMap) {
         AdminRefundVO vo = new AdminRefundVO();
         vo.setId(record.getId());
         vo.setRefundNo(record.getRefundNo());
         vo.setOrderId(record.getOrderId());
         vo.setUserId(record.getUserId());
 
-        Order order = orderMapper.selectById(record.getOrderId());
+        Order order = orderMap.get(record.getOrderId());
         if (order != null) {
             vo.setOrderNo(order.getOrderNo());
         }
 
-        User user = userMapper.selectById(record.getUserId());
+        User user = userMap.get(record.getUserId());
         if (user != null) {
             vo.setUserEmail(user.getEmail());
         }

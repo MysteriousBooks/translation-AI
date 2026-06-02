@@ -19,9 +19,10 @@ import com.translation.mapper.WalletRecordMapper;
 import com.translation.service.UserService;
 import com.translation.vo.app.LoginVO;
 import com.translation.vo.app.UserInfoVO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
@@ -33,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
     private final UserMapper userMapper;
@@ -41,6 +41,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private final JwtUtil jwtUtil;
     private final RedisUtil redisUtil;
     private final JavaMailSender mailSender;
+    private final UserService self;
+
+    public UserServiceImpl(UserMapper userMapper, WalletRecordMapper walletRecordMapper,
+                           JwtUtil jwtUtil, RedisUtil redisUtil,
+                           ObjectProvider<JavaMailSender> mailSenderProvider,
+                           @Lazy UserService self) {
+        this.userMapper = userMapper;
+        this.walletRecordMapper = walletRecordMapper;
+        this.jwtUtil = jwtUtil;
+        this.redisUtil = redisUtil;
+        this.mailSender = mailSenderProvider.getIfAvailable();
+        this.self = self;
+    }
 
     @Value("${mail.from}")
     private String mailFrom;
@@ -84,7 +97,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = new User();
         user.setEmail(dto.getEmail());
         user.setPassword(BCrypt.hashpw(dto.getPassword(), BCrypt.gensalt()));
-        user.setNickname(StrUtil.isNotBlank(dto.getNickname()) ? dto.getNickname() : dto.getEmail().split("@")[0]);
+        String defaultNickname = dto.getEmail().contains("@")
+                ? dto.getEmail().split("@")[0]
+                : dto.getEmail();
+        user.setNickname(StrUtil.isNotBlank(dto.getNickname()) ? dto.getNickname() :
+                (StrUtil.isNotBlank(defaultNickname) ? defaultNickname : "新用户"));
         user.setLoginType(LoginType.EMAIL.getCode());
         user.setStatus(1);
         user.setBalance(BigDecimal.ZERO);
@@ -240,11 +257,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         redisUtil.set(codeKey, code, codeExpireMinutes, TimeUnit.MINUTES);
         redisUtil.set(rateKey, "1", 60, TimeUnit.SECONDS);
 
-        sendVerifyCodeEmail(email, code);
+        self.sendVerifyCodeEmail(email, code);
     }
 
     @Async
     public void sendVerifyCodeEmail(String email, String code) {
+        if (mailSender == null) {
+            log.warn("邮件服务未配置，验证码仅输出日志: email={}, code={}", email, code);
+            return;
+        }
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(mailFrom);
@@ -261,7 +282,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     @Transactional
     public void updateUserBalance(Long userId, BigDecimal amount, String description, String orderNo, int type) {
-        User user = userMapper.selectById(userId);
+        /* 使用 SELECT ... FOR UPDATE 行锁，避免并发扣费/充值导致的余额异常 */
+        User user = userMapper.selectUserForUpdate(userId);
         if (user == null) {
             throw new BusinessException(ResultCode.USER_NOT_FOUND);
         }
@@ -274,7 +296,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             if (balanceAfter.compareTo(BigDecimal.ZERO) < 0) {
                 throw new BusinessException(ResultCode.BALANCE_NOT_ENOUGH);
             }
-            user.setTotalConsume(user.getTotalConsume().add(amount));
+            BigDecimal currentTotal = user.getTotalConsume() == null ? BigDecimal.ZERO : user.getTotalConsume();
+            user.setTotalConsume(currentTotal.add(amount));
         } else {
             balanceAfter = balanceBefore.add(amount);
         }
@@ -302,5 +325,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (!cachedCode.equals(code)) {
             throw new BusinessException(ResultCode.CODE_ERROR);
         }
+        /* 验证通过后立即删除，防止重复使用 */
+        redisUtil.delete(codeKey);
     }
 }

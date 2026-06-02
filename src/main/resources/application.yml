@@ -6,6 +6,8 @@ server:
 spring:
   profiles:
     active: dev
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -85,15 +87,8 @@ translation:
   price:
     per-kchar: 1.0
     min-consume: 0.01
-  supported-languages:
-    - zh-CN
-    - en
-    - ja
-    - ko
-    - fr
-    - de
-    - es
-    - ru
+  # supported-languages 通过 sys_config 表配置，键名：supported_languages（CSV 格式）
+  supported-languages: zh-CN,en,ja,ko,fr,de,es,ru
 
 # 邮件配置
 mail:

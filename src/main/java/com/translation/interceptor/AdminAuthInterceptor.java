@@ -47,6 +47,14 @@ public class AdminAuthInterceptor implements HandlerInterceptor {
         }
 
         Long adminId = jwtUtil.getUserId(token);
+
+        /* 单端登录校验：Token必须与Redis中的活跃Token一致 */
+        String activeKey = CommonConstant.ADMIN_TOKEN_PREFIX + "active:" + adminId;
+        String activeToken = redisUtil.get(activeKey);
+        if (activeToken == null || !activeToken.equals(token)) {
+            throw new BusinessException(ResultCode.UNAUTHORIZED);
+        }
+
         UserContext.setAdminId(adminId);
         return true;
     }

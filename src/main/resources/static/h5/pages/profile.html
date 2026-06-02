@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的 - AI翻译</title>
+    <link rel="stylesheet" href="/h5/css/h5.css">
+</head>
+<body>
+<div class="h5-header">
+    <div class="h5-header-title">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        我的
+    </div>
+    <div class="h5-header-actions">
+        <button class="h5-header-btn" onclick="H5.logout()">退出</button>
+    </div>
+</div>
+<div class="h5-pc-layout" id="pcLayout" style="display:none;"></div>
+<div id="mobileContent">
+    <div class="h5-container">
+        <div id="profileContent" class="h5-content" style="padding-top:0;">
+            <div class="loading-state"><div class="loading-spinner"></div><p>加载中...</p></div>
+        </div>
+    </div>
+</div>
+<div id="mobileTabbar"></div>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="/h5/js/common.js"></script>
+<script>
+H5.checkAuth();
+var prevIsMobile=null;
+function initLayout(){var e=window.innerWidth<768;if(prevIsMobile===e)return;prevIsMobile=e;var p=document.getElementById("pcLayout"),m=document.getElementById("mobileContent"),t=document.getElementById("mobileTabbar");if(e){p.style.display="none";m.style.display="block";t.innerHTML=renderTabbar(3);}else{m.style.display="none";t.innerHTML="";p.style.display="flex";p.innerHTML=renderSidebar(3)+'<div class="h5-pc-main"><div id="profileContentPc" style="padding-top:0;"></div></div>';loadProfile("profileContentPc");}}
+
+function loadProfile(cid){cid=cid||"profileContent";var c=document.getElementById(cid);if(!c)return;c.innerHTML='<div class="loading-state"><div class="loading-spinner"></div><p>加载中...</p></div>';H5.get("/user/info",{},function(r){if(!r||r.code!==200){c.innerHTML='<div class="empty-state"><p>'+(r?r.msg:"加载失败")+'</p></div>';return;}var u=r.data;var initial=(u.nickname||u.email||"?").charAt(0).toUpperCase();var h='<div class="profile-header"><div class="profile-avatar">'+escapeHtml(initial)+'</div><div class="profile-nickname">'+escapeHtml(u.nickname||"未设置")+'</div><div class="profile-email">'+escapeHtml(u.email)+'</div></div>';h+='<div class="profile-stats"><div class="profile-stat"><div class="profile-stat-value">&yen;'+H5.formatMoney(u.balance)+'</div><div class="profile-stat-label">余额</div></div><div class="profile-stat"><div class="profile-stat-value">&yen;'+H5.formatMoney(u.totalConsume)+'</div><div class="profile-stat-label">累计消耗</div></div></div>';h+='<div class="profile-menu"><div class="profile-menu-item" onclick="showEditModal()"><div class="profile-menu-item-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>修改资料</div><div class="profile-menu-item-right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="profile-menu-item" onclick="showPasswordModal()"><div class="profile-menu-item-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>修改密码</div><div class="profile-menu-item-right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div></div><div class="profile-menu-item" onclick="H5.logout()"><div class="profile-menu-item-left" style="color:#ff4d4f"><svg viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>退出登录</div><div class="profile-menu-item-right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div></div></div>';c.innerHTML=h;});}
+
+function showEditModal(){if(document.querySelector('.h5-modal-mask'))return;H5.get("/user/info",{},function(r){if(!r||r.code!==200){H5.toast(r?r.msg:"加载失败");return;}var u=r.data;var h='<div class="h5-modal-mask" onclick="if(event.target.classList.contains(\'h5-modal-mask\'))this.remove()"><div class="h5-modal" onclick="event.stopPropagation()"><div class="h5-modal-header">修改资料</div><div class="h5-modal-body"><div class="h5-form-group"><label class="h5-form-label">昵称</label><input type="text" id="editNickname" class="h5-form-input" value="'+escapeHtml(u.nickname||"")+'" maxlength="64"></div><div class="h5-form-group"><label class="h5-form-label">手机号</label><input type="text" id="editPhone" class="h5-form-input" value="'+escapeHtml(u.phone||"")+'" placeholder="选填"></div></div><div class="h5-modal-footer"><button class="h5-btn h5-btn-outline h5-btn-sm" onclick="document.querySelector(\'.h5-modal-mask\').remove()">取消</button><button class="h5-btn h5-btn-primary h5-btn-sm" onclick="doEditProfile()">保存</button></div></div></div>';document.body.insertAdjacentHTML("beforeend",h);});}
+
+function doEditProfile(){var n=document.getElementById("editNickname").value.trim();var p=document.getElementById("editPhone").value.trim();var d={};if(n)d.nickname=n;if(p)d.phone=p;var btn=document.querySelector('.h5-modal-footer .h5-btn-primary');btn&&(btn.disabled=true,btn.textContent="提交中...");H5.put("/user/info",d,function(r){btn&&(btn.disabled=false,btn.textContent="保存");if(!r)return;if(r.code===200){H5.toast("修改成功");if(n)localStorage.setItem("h5_nickname",n);document.querySelector(".h5-modal-mask").remove();loadProfile("profileContent");var pc=document.getElementById("profileContentPc");if(pc)loadProfile("profileContentPc");}else{H5.toast(r.msg||"修改失败");}});}
+
+function showPasswordModal(){if(document.querySelector('.h5-modal-mask'))return;var h='<div class="h5-modal-mask" onclick="if(event.target.classList.contains(\'h5-modal-mask\'))this.remove()"><div class="h5-modal" onclick="event.stopPropagation()"><div class="h5-modal-header">修改密码</div><div class="h5-modal-body"><div class="h5-form-group"><label class="h5-form-label">旧密码</label><input type="password" id="oldPassword" class="h5-form-input" placeholder="请输入旧密码"></div><div class="h5-form-group"><label class="h5-form-label">新密码</label><input type="password" id="newPassword" class="h5-form-input" placeholder="6-20位新密码" maxlength="20"></div></div><div class="h5-modal-footer"><button class="h5-btn h5-btn-outline h5-btn-sm" onclick="document.querySelector(\'.h5-modal-mask\').remove()">取消</button><button class="h5-btn h5-btn-primary h5-btn-sm" onclick="doChangePassword()">确认</button></div></div></div>';document.body.insertAdjacentHTML("beforeend",h);}
+
+function doChangePassword(){var o=document.getElementById("oldPassword").value;var n=document.getElementById("newPassword").value;if(!o){H5.toast("请输入旧密码");return;}if(!n||n.length<6){H5.toast("新密码至少6位");return;}var btn=document.querySelector('.h5-modal-footer .h5-btn-primary');btn&&(btn.disabled=true,btn.textContent="提交中...");H5.put("/user/password",{oldPassword:o,newPassword:n},function(r){btn&&(btn.disabled=false,btn.textContent="确认");if(!r)return;if(r.code===200){H5.toast("密码修改成功，请重新登录");setTimeout(function(){H5.logout();},1500);}else{H5.toast(r.msg||"修改失败");}});}
+
+initLayout();loadProfile("profileContent");
+window.addEventListener("resize",function(){clearTimeout(window._rt);window._rt=setTimeout(initLayout,200);});
+</script>
+</body>
+</html>

@@ -103,4 +103,11 @@ public class JwtUtil {
     public long getAppExpirationSeconds() {
         return appExpiration;
     }
+
+    /**
+     * 获取Admin端Token过期时间（秒）
+     */
+    public long getAdminExpirationSeconds() {
+        return adminExpiration;
+    }
 }

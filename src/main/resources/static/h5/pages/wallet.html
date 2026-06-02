@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>钱包 - AI翻译</title>
+    <link rel="stylesheet" href="/h5/css/h5.css">
+</head>
+<body>
+<div class="h5-header">
+    <div class="h5-header-title">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/></svg>
+        我的钱包
+    </div>
+    <div class="h5-header-actions">
+        <button class="h5-header-btn" onclick="H5.logout()">退出</button>
+    </div>
+</div>
+<div class="h5-pc-layout" id="pcLayout" style="display:none;"></div>
+<div id="mobileContent">
+    <div class="h5-container">
+        <div id="walletContent" class="h5-content" style="padding-top:16px;">
+            <div class="loading-state"><div class="loading-spinner"></div><p>加载中...</p></div>
+        </div>
+    </div>
+</div>
+<div id="mobileTabbar"></div>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="/h5/js/common.js"></script>
+<script>
+H5.checkAuth();
+var selectedAmount=50;
+var prevIsMobile=null;
+function initLayout(){var e=window.innerWidth<768;if(prevIsMobile===e)return;prevIsMobile=e;var p=document.getElementById("pcLayout"),m=document.getElementById("mobileContent"),t=document.getElementById("mobileTabbar");if(e){p.style.display="none";m.style.display="block";t.innerHTML=renderTabbar(2);}else{m.style.display="none";t.innerHTML="";p.style.display="flex";p.innerHTML=renderSidebar(2)+'<div class="h5-pc-main"><div id="walletContentPc" style="padding-top:16px;"></div></div>';loadWallet("walletContentPc");}}
+
+function selectAmount(el,amt){document.querySelectorAll(".recharge-item").forEach(function(i){i.classList.remove("active")});el.classList.add("active");selectedAmount=amt;var c=document.getElementById("customAmount");if(c)c.value="";}
+
+function loadWallet(cid){cid=cid||"walletContent";var c=document.getElementById(cid);if(!c)return;c.innerHTML='<div class="loading-state"><div class="loading-spinner"></div><p>加载中...</p></div>';H5.get("/wallet/balance",{},function(r){if(!r||r.code!==200){c.innerHTML='<div class="empty-state"><p>'+(r?r.msg:"加载失败")+'</p></div>';return;}var w=r.data;var h='<div class="wallet-balance"><div class="wallet-balance-label">账户余额（元）</div><div class="wallet-balance-amount">¥'+H5.formatMoney(w.balance)+'</div><div class="wallet-balance-sub">累计消耗 ¥'+H5.formatMoney(w.totalConsume)+'</div></div>';h+='<div class="h5-card"><div class="h5-card-header">充值</div><div class="h5-card-body"><div class="recharge-grid"><div class="recharge-item" onclick="selectAmount(this,10)">10<span>元</span></div><div class="recharge-item" onclick="selectAmount(this,30)">30<span>元</span></div><div class="recharge-item active" onclick="selectAmount(this,50)">50<span>元</span></div><div class="recharge-item" onclick="selectAmount(this,100)">100<span>元</span></div><div class="recharge-item" onclick="selectAmount(this,200)">200<span>元</span></div><div class="recharge-item" onclick="selectAmount(this,500)">500<span>元</span></div></div><div class="h5-form-group"><label class="h5-form-label">自定义金额</label><input type="number" id="customAmount" class="h5-form-input" placeholder="请输入充值金额" min="0.01" step="0.01" oninput="document.querySelectorAll('.recharge-item').forEach(function(i){i.classList.remove('active')})"></div><div class="h5-form-group"><label class="h5-form-label">支付方式</label><select id="payTypeSelect" class="h5-form-select"><option value="1">支付宝</option><option value="2">微信支付</option></select></div><button class="h5-btn h5-btn-primary" id="rechargeBtn" onclick="doRecharge()">立即充值</button></div></div>';h+='<div class="h5-card"><div class="h5-card-header">流水记录</div><div id="recordsArea"></div></div>';c.innerHTML=h;loadRecords("recordsArea",1);});}
+
+function doRecharge(){var c=document.getElementById("customAmount").value;var a=c?parseFloat(c):selectedAmount;var pt=document.getElementById("payTypeSelect").value;if(!a||a<=0){H5.toast("请选择或输入充值金额");return;}var b=document.getElementById("rechargeBtn");b.disabled=true;b.textContent="提交中...";H5.post("/wallet/recharge",{payType:parseInt(pt),amount:a},function(r){b.disabled=false;b.textContent="立即充值";if(!r)return;if(r.code!==200){H5.toast(r.msg||"充值失败");return;}var pd=r.data.payData,ono=r.data.orderNo;if(!pd){H5.toast("订单创建成功");return;}var payTypeInt=parseInt(pt);if(payTypeInt===1){/* 支付宝：检查是否为表单HTML或URL */if(pd.indexOf("<form")===0||pd.indexOf("<FORM")===0){/* 安全处理：解析表单的action和隐藏字段，重建表单避免直接注入原始HTML */var formAction="";var hiddenFields="";try{var parser=new DOMParser();var doc=parser.parseFromString(pd,"text/html");var formEl=doc.querySelector("form");if(formEl){formAction=formEl.getAttribute("action")||"";var inputs=formEl.querySelectorAll("input[type=hidden]");for(var idx=0;idx<inputs.length;idx++){hiddenFields+='<input type="hidden" name="'+escapeHtml(inputs[idx].name)+'" value="'+escapeHtml(inputs[idx].value)+'">';';}}if(formAction){var safeForm='<form name="alipaysubmit" method="POST" action="'+escapeHtml(formAction)+'">'+hiddenFields+'</form>';document.body.insertAdjacentHTML("beforeend",safeForm);var f=document.querySelector('form[name="alipaysubmit"]');if(f)f.submit();else{H5.toast("支付表单加载失败");}}else{H5.toast("支付表单解析失败");}}catch(e){H5.toast("支付表单解析失败");}}else{/* 支付宝二维码模式（H5 唤起 App） */window.location.href=pd;}}else if(payTypeInt===2){showWechatQr(pd,ono);}else{H5.toast("不支持的支付类型");}});}
+
+function showWechatQr(codeUrl,orderNo){closeWechatQr();var safeUrl=codeUrl||"";var qrImg;try{/* 尝试在前端生成二维码（不依赖第三方 API），失败则降级显示订单号 */if(window.QRCode){qrImg='<div id="wechatQrContainer"></div>';}else{qrImg='<div id="wechatQrContainer" style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;background:#f5f5f5;border-radius:8px;color:#888;font-size:13px;">请使用微信扫一扫<br>输入以下订单号<br><b style="color:#333;font-size:16px;margin-top:6px;">'+escapeHtml(orderNo||"")+'</b></div>';}}catch(e){qrImg='<div id="wechatQrContainer"></div>';}var h='<div class="h5-modal-mask" id="wechatQrMask" onclick="if(event.target===this)closeWechatQr()"><div class="h5-modal" onclick="event.stopPropagation()" style="text-align:center;"><div class="h5-modal-header">微信扫码支付</div><div class="h5-modal-body"><p style="font-size:13px;color:#888;margin-bottom:16px;">请使用微信扫一扫完成支付</p>'+qrImg+'<p style="font-size:12px;color:#999;margin-top:12px;"><span id="payCountdown">支付确认中</span></p><p style="font-size:11px;color:#bbb;margin-top:8px;word-break:break-all;">订单号：'+escapeHtml(orderNo||"")+'</p></div><div class="h5-modal-footer" style="justify-content:center;"><button class="h5-btn h5-btn-outline h5-btn-sm" onclick="closeWechatQr()">关闭</button></div></div></div>';document.body.insertAdjacentHTML("beforeend",h);/* 若支持 QRCode 库则动态生成 */if(window.QRCode&&document.getElementById("wechatQrContainer")){try{new QRCode(document.getElementById("wechatQrContainer"),{text:safeUrl,width:200,height:200,colorDark:"#000000",colorLight:"#ffffff"});}catch(e){console.error("QRCode 渲染失败",e);}}pollOrderStatus(orderNo);}
+
+function closeWechatQr(){clearInterval(window._payTimer);var m=document.getElementById("wechatQrMask");if(m)m.remove();window._payTimer=null;}
+
+function pollOrderStatus(orderNo){if(window._payTimer)clearInterval(window._payTimer);var count=0;window._payTimer=setInterval(function(){count++;if(count>100){clearInterval(window._payTimer);window._payTimer=null;var cd=document.getElementById("payCountdown");if(cd)cd.textContent="已超时，请关闭重试";/* 超时后自动关闭弹窗，避免无限循环 */setTimeout(function(){closeWechatQr();},3000);return;}document.getElementById("payCountdown")&&(document.getElementById("payCountdown").textContent="等待支付"+(count*3)+"s");H5.get("/wallet/recharge/status/"+orderNo,{},function(r){if(!r)return;if(r.code===200&&r.data.status===1){clearInterval(window._payTimer);window._payTimer=null;H5.toast("支付成功");closeWechatQr();loadWallet("walletContent");var pc=document.getElementById("walletContentPc");if(pc)loadWallet("walletContentPc");}});},3000);}
+
+function loadRecords(cid,pg){var c=document.getElementById(cid);if(!c)return;H5.get("/wallet/records",{page:pg,size:10},function(r){if(!r||r.code!==200){c.innerHTML='<div class="empty-state"><p>暂无流水记录</p></div>';return;}var d=r.data;if(!d||!d.records||!d.records.length){c.innerHTML='<div class="empty-state"><p>暂无流水记录</p></div>';return;}var h="";for(var i=0;i<d.records.length;i++){var e=d.records[i];var ac=e.type===1||e.type===3?"income":"expense";var pf=e.type===1||e.type===3?"+":"-";h+='<div class="record-item"><div class="record-item-top"><span class="record-item-type">'+escapeHtml(WalletRecordTypeMap[e.type]||"未知")+'</span><span class="record-item-amount '+ac+'">'+pf+"¥"+H5.formatMoney(e.amount)+'</span></div>'+(e.description?'<div style="font-size:12px;color:#999;margin-bottom:2px;">'+escapeHtml(e.description)+'</div>':'')+'<div class="record-item-time">'+escapeHtml(H5.formatTime(e.createTime))+'</div></div>';}if(d.records.length>0&&d.total>d.size){var cp=parseInt(d.page)||1;var tp=Math.ceil(d.total/d.size);h+='<div class="h5-pagination"><button onclick="loadRecords(\''+escapeHtml(cid)+'\','+(cp-1)+')"'+(cp<=1?' disabled':'')+'>上一页</button><span>'+cp+'/'+tp+'</span><button onclick="loadRecords(\''+escapeHtml(cid)+'\','+(cp+1)+')"'+(cp>=tp?' disabled':'')+'>下一页</button></div>';}c.innerHTML=h;});}
+
+initLayout();loadWallet("walletContent");
+window.addEventListener("resize",function(){clearTimeout(window._rt);window._rt=setTimeout(initLayout,200);});
+</script>
+</body>
+</html>

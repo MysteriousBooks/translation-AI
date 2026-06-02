@@ -10,6 +10,7 @@ import com.translation.service.TokenStatisticsService;
 import com.translation.vo.admin.TokenStatisticsVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -23,14 +24,13 @@ public class TokenStatisticsServiceImpl extends ServiceImpl<TokenStatisticsMappe
     private final TokenStatisticsMapper tokenStatisticsMapper;
 
     @Override
+    @Transactional
     public void recordStatistics(int tokens, int chars, BigDecimal cost, boolean success) {
         LocalDate today = LocalDate.now();
-        TokenStatistics stats = lambdaQuery()
-                .eq(TokenStatistics::getStatDate, today)
-                .one();
-
-        if (stats == null) {
-            stats = new TokenStatistics();
+        /* 先尝试 UPDATE 累加（原子操作），未命中则 INSERT 新行 */
+        int updated = tokenStatisticsMapper.incrementStatistics(today, tokens, chars, cost, success ? 1 : 0, success ? 0 : 1, 1);
+        if (updated == 0) {
+            TokenStatistics stats = new TokenStatistics();
             stats.setStatDate(today);
             stats.setTotalCalls(1);
             stats.setTotalTokens(tokens);
@@ -38,18 +38,12 @@ public class TokenStatisticsServiceImpl extends ServiceImpl<TokenStatisticsMappe
             stats.setTotalCost(cost);
             stats.setSuccessCount(success ? 1 : 0);
             stats.setFailCount(success ? 0 : 1);
-            tokenStatisticsMapper.insert(stats);
-        } else {
-            stats.setTotalCalls(stats.getTotalCalls() + 1);
-            stats.setTotalTokens(stats.getTotalTokens() + tokens);
-            stats.setTotalChars(stats.getTotalChars() + chars);
-            stats.setTotalCost(stats.getTotalCost().add(cost));
-            if (success) {
-                stats.setSuccessCount(stats.getSuccessCount() + 1);
-            } else {
-                stats.setFailCount(stats.getFailCount() + 1);
+            try {
+                tokenStatisticsMapper.insert(stats);
+            } catch (Exception e) {
+                /* 并发场景下其他线程可能已插入，重试一次 UPDATE */
+                tokenStatisticsMapper.incrementStatistics(today, tokens, chars, cost, success ? 1 : 0, success ? 0 : 1, 1);
             }
-            tokenStatisticsMapper.updateById(stats);
         }
     }
 

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>翻译历史 - AI翻译</title>
+    <link rel="stylesheet" href="/h5/css/h5.css">
+</head>
+<body>
+<div class="h5-header">
+    <div class="h5-header-title">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        翻译历史
+    </div>
+    <div class="h5-header-actions">
+        <button class="h5-header-btn" onclick="H5.logout()">退出</button>
+    </div>
+</div>
+
+<div class="h5-pc-layout" id="pcLayout" style="display:none;"></div>
+<div id="mobileContent">
+    <div class="h5-container">
+        <div id="historyList" class="h5-content" style="padding-top:16px;">
+            <div class="loading-state"><div class="loading-spinner"></div><p>加载中...</p></div>
+        </div>
+    </div>
+</div>
+<div id="mobileTabbar"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="/h5/js/common.js"></script>
+<script>
+H5.checkAuth();
+
+var currentPage = 1;
+var totalPages = 1;
+var prevIsMobile = null;
+
+/* 响应式布局 */
+function initLayout() {
+    var isMobile = window.innerWidth < 768;
+    if (prevIsMobile === isMobile) return;
+    prevIsMobile = isMobile;
+
+    var pcLayout = document.getElementById('pcLayout');
+    var mobileContent = document.getElementById('mobileContent');
+    var mobileTabbar = document.getElementById('mobileTabbar');
+
+    if (isMobile) {
+        pcLayout.style.display = 'none';
+        mobileContent.style.display = 'block';
+        mobileTabbar.innerHTML = renderTabbar(1);
+    } else {
+        mobileContent.style.display = 'none';
+        mobileTabbar.innerHTML = '';
+        pcLayout.style.display = 'flex';
+        pcLayout.innerHTML = renderSidebar(1) + '<div class="h5-pc-main"><div id="historyListPc" style="padding-top:16px;"></div></div>';
+        loadHistory(1, 'historyListPc');
+    }
+}
+
+function loadHistory(page, containerId) {
+    containerId = containerId || 'historyList';
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>加载中...</p></div>';
+
+    H5.get('/translate/history', {page: page, size: 10}, function (res) {
+        if (!res || res.code !== 200) {
+            container.innerHTML = '<div class="empty-state"><p>' + (res ? res.msg : '加载失败') + '</p></div>';
+            return;
+        }
+        var data = res.data;
+        currentPage = data.page;
+        totalPages = Math.ceil(data.total / data.size);
+
+        if (!data.records || data.records.length === 0) {
+            container.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>暂无翻译记录</p></div>';
+            return;
+        }
+
+        var html = '<div class="h5-card"><div class="h5-card-header">翻译历史</div>';
+        for (var i = 0; i < data.records.length; i++) {
+            var r = data.records[i];
+            var statusClass = r.status === 1 ? 'status-success' : (r.status === 2 ? 'status-failed' : 'status-translating');
+            var statusText = TranslateStatusMap[r.status] || '未知';
+            var sourceLangName = LangMap[r.sourceLang] || escapeHtml(r.sourceLang);
+            var targetLangName = LangMap[r.targetLang] || escapeHtml(r.targetLang);
+            html += '<div class="history-item" data-id="' + escapeHtml(String(r.id)) + '">' +
+                '<div class="history-item-header">' +
+                    '<span class="history-item-langs">' + sourceLangName + ' → ' + targetLangName + '</span>' +
+                    '<span class="history-item-time">' + escapeHtml(H5.formatTime(r.createTime)) + '</span>' +
+                '</div>' +
+                '<div class="history-item-source">' + escapeHtml(r.sourceText) + '</div>' +
+                (r.translatedText ? '<div class="history-item-result">' + escapeHtml(r.translatedText) + '</div>' : '') +
+                '<div class="history-item-footer">' +
+                    '<span class="history-item-cost">' + escapeHtml(String(r.charCount)) + '字符 · ¥' + H5.formatMoney(r.costAmount) + '</span>' +
+                    '<span class="history-item-status ' + statusClass + '">' + escapeHtml(statusText) + '</span>' +
+                '</div>' +
+            '</div>';
+        }
+        html += '</div>';
+
+        if (totalPages > 1) {
+            html += '<div class="h5-pagination">';
+            html += '<button class="h5-page-btn" data-page="' + (currentPage - 1) + '" data-container="' + escapeHtml(containerId) + '"' + (currentPage <= 1 ? ' disabled' : '') + '>上一页</button>';
+            html += '<span>' + currentPage + ' / ' + totalPages + '</span>';
+            html += '<button class="h5-page-btn" data-page="' + (currentPage + 1) + '" data-container="' + escapeHtml(containerId) + '"' + (currentPage >= totalPages ? ' disabled' : '') + '>下一页</button>';
+            html += '</div>';
+        }
+        container.innerHTML = html;
+
+        /* 事件委托：分页按钮点击 */
+        container.querySelectorAll('.h5-page-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                loadHistory(parseInt(this.dataset.page), this.dataset.container);
+            });
+        });
+
+        /* 事件委托：翻译记录点击查看详情 */
+        container.querySelectorAll('.history-item[data-id]').forEach(function(item) {
+            item.addEventListener('click', function() {
+                viewDetail(parseInt(this.dataset.id));
+            });
+        });
+    });
+}
+
+function viewDetail(id) {
+    /* 验证id为正整数，防止路径注入 */
+    if (!/^\d+$/.test(String(id))) { H5.toast('参数错误'); return; }
+    H5.get('/translate/' + id, {}, function (res) {
+        if (!res || res.code !== 200) { H5.toast(res ? res.msg : '加载失败'); return; }
+        var d = res.data;
+        if (!d) { H5.toast('数据异常'); return; }
+        var statusText = TranslateStatusMap[d.status] || '未知';
+        var sourceLangName = LangMap[d.sourceLang] || escapeHtml(d.sourceLang);
+        var targetLangName = LangMap[d.targetLang] || escapeHtml(d.targetLang);
+        var html = '<div class="h5-modal-mask" onclick="closeModal(event)">' +
+            '<div class="h5-modal" onclick="event.stopPropagation()">' +
+                '<div class="h5-modal-header">翻译详情</div>' +
+                '<div class="h5-modal-body">' +
+                    '<p style="margin-bottom:8px;font-size:13px;color:#888;">' + sourceLangName + ' → ' + targetLangName + '</p>' +
+                    '<div style="background:#f8f9ff;border-radius:8px;padding:12px;margin-bottom:12px;">' +
+                        '<div style="font-size:12px;color:#888;margin-bottom:4px;">原文</div>' +
+                        '<div style="font-size:14px;line-height:1.6;white-space:pre-wrap;">' + escapeHtml(d.sourceText) + '</div>' +
+                    '</div>' +
+                    '<div style="background:#f0fff0;border-radius:8px;padding:12px;">' +
+                        '<div style="font-size:12px;color:#888;margin-bottom:4px;">译文</div>' +
+                        '<div style="font-size:14px;line-height:1.6;white-space:pre-wrap;">' + escapeHtml(d.translatedText || statusText) + '</div>' +
+                    '</div>' +
+                    '<div style="margin-top:12px;font-size:12px;color:#888;">' +
+                        escapeHtml(String(d.charCount || 0)) + '字符 · ¥' + H5.formatMoney(d.costAmount) + ' · ' + escapeHtml(H5.formatTime(d.createTime)) +
+                    '</div>' +
+                '</div>' +
+                '<div class="h5-modal-footer"><button class="h5-btn h5-btn-primary h5-btn-sm" onclick="document.querySelector(\'.h5-modal-mask\').remove()">关闭</button></div>' +
+            '</div>' +
+        '</div>';
+        document.body.insertAdjacentHTML('beforeend', html);
+    });
+}
+
+function closeModal(e) {
+    if (e.target.classList.contains('h5-modal-mask')) e.target.remove();
+}
+
+initLayout();
+loadHistory(1, 'historyList');
+window.addEventListener('resize', function(){clearTimeout(window._rt);window._rt=setTimeout(initLayout,200);});
+</script>
+</body>
+</html>

@@ -5,6 +5,7 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @ApiModel("翻译结果响应")
@@ -39,4 +40,7 @@ public class TranslateResultVO {
 
     @ApiModelProperty("错误信息")
     private String errorMsg;
+
+    @ApiModelProperty("创建时间")
+    private LocalDateTime createTime;
 }
