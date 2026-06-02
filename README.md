@@ -22,12 +22,21 @@
 
 ### 微信小程序端
 
-| 技术 | 说明 |
-|------|------|
-| 原生微信小程序 | WXML/WXSS/JS，无第三方框架依赖 |
-| 微信登录 | wx.login 获取code，对接后端 /api/app/auth/login/wechat |
-| 微信支付 | 小程序支付（requestPayment），需后端适配小程序支付参数 |
-| 基础库 | > = 2.20.0 |
+| 技术      | 说明                                              |
+|---------|-------------------------------------------------|
+| 原生微信小程序 | WXML/WXSS/JS，无第三方框架依赖                           |
+| 微信登录    | wx.login 获取code，对接后端 /api/app/auth/login/wechat |
+| 微信支付    | 小程序支付（requestPayment），需后端适配小程序支付参数              |
+| 基础库     | >= 2.20.0                                       |
+
+### H5 Web端
+
+| 技术            | 说明                     |
+|---------------|------------------------|
+| 原生HTML/CSS/JS | 无框架依赖，响应式布局适配PC/移动端    |
+| jQuery 3.7.1  | DOM操作与Ajax请求           |
+| 微信支付          | 扫码支付（Native模式），前端生成二维码 |
+| 支付宝           | PC网站支付（表单提交）或H5唤起      |
 
 ### Android端
 
@@ -59,6 +68,16 @@
 | 钱包 | 余额查询、充值（支付宝/微信）、流水记录 |
 | 退款 | 申请退款 |
 | 其他 | 系统公告、意见反馈 |
+
+### H5 Web端
+
+| 模块 | 功能                     |
+|----|------------------------|
+| 认证 | 邮箱注册/登录、忘记密码、验证码       |
+| 翻译 | 多语言翻译、源/目标语言切换、一键复制结果  |
+| 历史 | 翻译记录分页列表、翻译详情弹窗        |
+| 钱包 | 余额展示、充值（支付宝/微信扫码）、交易流水 |
+| 个人 | 编辑资料、修改密码              |
 
 ### 微信小程序端
 
@@ -135,7 +154,8 @@ translation:
     api-key: your-api-key
     model: gpt-3.5-turbo
 
-# 邮件配置（验证码）
+# 邮件配置（验证码，开发环境可选）
+# 未配置时验证码仅输出到日志，生产环境必须配置真实SMTP
 mail:
   host: smtp.example.com
   username: your-email
@@ -162,11 +182,12 @@ java -jar target/translation-1.0.0.jar
 
 ### 访问地址
 
-| 服务 | 地址 |
-|------|------|
-| API文档 | http://localhost:8080/doc.html |
-| 管理后台 | http://localhost:8080/admin/login.html |
-| 微信小程序 | 使用微信开发者工具打开 `miniprogram/` 目录 |
+| 服务    | 地址                                     |
+|-------|----------------------------------------|
+| API文档 | http://localhost:8080/doc.html         |
+| H5用户端 | http://localhost:8080/h5/login.html    |
+| 管理后台  | http://localhost:8080/admin/login.html |
+| 微信小程序 | 使用微信开发者工具打开 `miniprogram/` 目录          |
 
 ### 默认管理员
 
@@ -293,12 +314,26 @@ src/main/java/com/translation/
     └── admin/           # 后台VO（6个）
 
 src/main/resources/
-├── application.yml              # 主配置文件
+├── application.yml              # 主配置文件（邮件自动配置已排除，需生产环境启用）
 ├── application-dev.yml          # 开发环境配置
 ├── application-prod.yml         # 生产环境配置
 ├── db/
 │   └── V1__init.sql             # 数据库初始化脚本
-└── static/admin/                # 管理后台WEB
+└── static/
+    ├── admin/                # 管理后台WEB
+    │   ├── login.html        # 登录页
+    │   ├── index.html        # 主框架（侧边栏导航）
+    │   ├── js/common.js     # 公共JS
+    │   └── pages/            # 后台管理页面
+    └── h5/                  # H5用户端WEB
+        ├── index.html       # 翻译首页
+        ├── login.html       # 登录/注册
+        ├── css/h5.css       # 样式
+        ├── js/common.js     # 公共JS（API封装、认证、转义、状态映射）
+        └── pages/
+            ├── history.html # 翻译历史
+            ├── profile.html # 个人中心
+            └── wallet.html  # 钱包
     ├── login.html               # 登录页
     ├── index.html               # 主框架（侧边栏导航）
     ├── js/
