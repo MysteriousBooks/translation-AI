@@ -18,7 +18,7 @@
                         </div>
                     </div>
                     <div class="layui-inline">
-                        <button class="layui-btn" lay-submit lay-filter="searchToken"><i
+                        <button class="layui-btn layui-btn-normal" lay-submit lay-filter="searchToken"><i
                                 class="layui-icon layui-icon-search"></i> 汇总查询
                         </button>
                     </div>
@@ -91,13 +91,13 @@
                         total.success += d.successCount || 0;
                         total.fail += d.failCount || 0;
                     });
-                    var html = '<div class="layui-row layui-col-space10">';
-                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#667eea,#764ba2);"><div class="stat-label">总调用</div><div class="stat-value">' + total.calls + '</div></div></div>';
-                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#f093fb,#f5576c);"><div class="stat-label">总Token</div><div class="stat-value">' + total.tokens + '</div></div></div>';
-                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#4facfe,#00f2fe);"><div class="stat-label">总字符</div><div class="stat-value">' + total.chars + '</div></div></div>';
-                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#43e97b,#38f9d7);"><div class="stat-label">总金额(元)</div><div class="stat-value">' + total.cost.toFixed(2) + '</div></div></div>';
-                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#52c41a,#73d13d);"><div class="stat-label">成功</div><div class="stat-value">' + total.success + '</div></div></div>';
-                    html += '<div class="layui-col-md2"><div class="stat-card" style="background:linear-gradient(135deg,#ff4d4f,#ff7875);"><div class="stat-label">失败</div><div class="stat-value">' + total.fail + '</div></div></div>';
+                    var html = '<div class="layui-row layui-col-space15">';
+                    html += '<div class="layui-col-md2"><div class="stat-card"><div class="stat-label">总调用</div><div class="stat-value">' + total.calls + '</div></div></div>';
+                    html += '<div class="layui-col-md2"><div class="stat-card"><div class="stat-label">总Token</div><div class="stat-value">' + total.tokens + '</div></div></div>';
+                    html += '<div class="layui-col-md2"><div class="stat-card"><div class="stat-label">总字符</div><div class="stat-value">' + total.chars + '</div></div></div>';
+                    html += '<div class="layui-col-md2"><div class="stat-card"><div class="stat-label">总金额(元)</div><div class="stat-value">' + total.cost.toFixed(2) + '</div></div></div>';
+                    html += '<div class="layui-col-md2"><div class="stat-card"><div class="stat-label">成功</div><div class="stat-value">' + total.success + '</div></div></div>';
+                    html += '<div class="layui-col-md2"><div class="stat-card"><div class="stat-label">失败</div><div class="stat-value">' + total.fail + '</div></div></div>';
                     html += '</div>';
                     $('#tokenSummary').html(html);
                 } else {

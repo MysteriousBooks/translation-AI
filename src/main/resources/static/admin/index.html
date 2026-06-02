@@ -45,14 +45,16 @@
     </div>
     <div class="layui-footer" style="text-align:center;">AI翻译服务 &copy; 2024</div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/layui@2.9.8/dist/layui.js"></script>
 <script src="/admin/js/common.js"></script>
 <script>
     checkAuth();
     document.getElementById('adminNickname').textContent = localStorage.getItem('admin_nickname') || '管理员';
 
-    layui.use(['element', 'layer'], function () {
+    layui.use(['element', 'layer', 'form'], function () {
         var element = layui.element;
+        var form = layui.form;
         var $ = layui.$;
 
         /* 导航点击加载页面 */
@@ -60,11 +62,15 @@
             var href = $(this).attr('lay-href');
             $('.layui-nav-item').removeClass('layui-this');
             $(this).parent().addClass('layui-this');
-            $('#contentArea').load(href);
+            $('#contentArea').load(href, function () {
+                form.render();
+            });
         });
 
         /* 默认加载看板 */
-        $('#contentArea').load('/admin/pages/dashboard.html');
+        $('#contentArea').load('/admin/pages/dashboard.html', function () {
+            form.render();
+        });
     });
 </script>
 </body>

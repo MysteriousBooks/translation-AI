@@ -138,10 +138,10 @@ public class RefundServiceImpl extends ServiceImpl<RefundRecordMapper, RefundRec
             orderIds.add(r.getOrderId());
             userIds.add(r.getUserId());
         }
-        java.util.Map<Long, Order> orderMap = orderMapper.selectBatchIds(orderIds)
-                .stream().collect(java.util.stream.Collectors.toMap(Order::getId, o -> o));
-        java.util.Map<Long, User> userMap = userMapper.selectBatchIds(userIds)
-                .stream().collect(java.util.stream.Collectors.toMap(User::getId, u -> u));
+        java.util.Map<Long, Order> orderMap = orderIds.isEmpty() ? java.util.Collections.emptyMap()
+                : orderMapper.selectBatchIds(orderIds).stream().collect(java.util.stream.Collectors.toMap(Order::getId, o -> o));
+        java.util.Map<Long, User> userMap = userIds.isEmpty() ? java.util.Collections.emptyMap()
+                : userMapper.selectBatchIds(userIds).stream().collect(java.util.stream.Collectors.toMap(User::getId, u -> u));
 
         Page<AdminRefundVO> voPage = new Page<>(result.getCurrent(), result.getSize(), result.getTotal());
         voPage.setRecords(result.getRecords().stream()
