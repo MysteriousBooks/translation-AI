@@ -137,9 +137,8 @@
 
 1. 创建数据库并执行初始化脚本：
 
-```sql
-source
-src/main/resources/db/V1__init.sql
+```bash
+mysql -u root -p translation_db < src/main/resources/db/V1__init.sql
 ```
 
 2. 修改 `src/main/resources/application-dev.yml` 中的数据库和Redis连接信息
