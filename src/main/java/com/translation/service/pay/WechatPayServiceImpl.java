@@ -233,10 +233,8 @@ public class WechatPayServiceImpl implements PayService {
         return keyFactory.generatePrivate(spec);
     }
 
-    /**
-     * 解密微信支付回调解密数据（供外部调用）
-     */
-    public String decryptResource(String ciphertext, String nonce, String associatedData) {
+    @Override
+    public String decryptCallback(String ciphertext, String nonce, String associatedData) {
         try {
             return decryptAesGcm(ciphertext, nonce, associatedData);
         } catch (Exception e) {

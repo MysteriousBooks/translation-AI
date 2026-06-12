@@ -5,7 +5,7 @@ server:
 
 spring:
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration
   datasource:
@@ -13,7 +13,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/translation-ai?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: '123456'
+    password: ${DB_PASSWORD}
     druid:
       initial-size: 5
       min-idle: 5
@@ -30,6 +30,8 @@ spring:
         enabled: true
         url-pattern: /druid/*
         reset-enable: false
+        login-username: ${DRUID_USERNAME}
+        login-password: ${DRUID_PASSWORD}
       web-stat-filter:
         enabled: true
         url-pattern: /*
@@ -62,10 +64,9 @@ spring:
 
 # MyBatis-Plus
 mybatis-plus:
-  mapper-locations: classpath:mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
   global-config:
     db-config:
       id-type: auto
@@ -75,16 +76,16 @@ mybatis-plus:
 
 # JWT配置
 jwt:
-  secret: TranslationProjectSecretKey2024ForJwtTokenGenerationAtLeast256Bits
+  secret: ${JWT_SECRET}
   app-expiration: 604800
   admin-expiration: 86400
 
 # 翻译配置
 translation:
   llm:
-    api-url: https://api.openai.com/v1/chat/completions
-    api-key: your-api-key
-    model: gpt-3.5-turbo
+    api-url: ${LLM_API_URL}
+    api-key: ${LLM_API_KEY}
+    model: ${LLM_MODEL}
     max-retries: 3
     timeout: 60
   price:
@@ -95,29 +96,29 @@ translation:
 
 # 邮件配置
 mail:
-  host: smtp.example.com
-  port: 465
-  username: your-email@example.com
-  password: your-password
-  from: your-email@example.com
+  host: ${MAIL_HOST}
+  port: ${MAIL_PORT}
+  username: ${MAIL_USERNAME}
+  password: ${MAIL_PASSWORD}
+  from: ${MAIL_FROM}
   code-expire-minutes: 5
 
 # 支付配置
 pay:
   alipay:
-    app-id: your-app-id
-    private-key: your-private-key
-    public-key: alipay-public-key
-    notify-url: https://your-domain.com/api/app/wallet/recharge/callback/alipay
-    return-url: https://your-domain.com/pay/result
+    app-id: ${ALIPAY_APP_ID}
+    private-key: ${ALIPAY_PRIVATE_KEY}
+    public-key: ${ALIPAY_PUBLIC_KEY}
+    notify-url: ${ALIPAY_NOTIFY_URL}
+    return-url: ${ALIPAY_RETURN_URL}
     sandbox: true
   wechat:
-    app-id: your-app-id
-    mch-id: your-mch-id
-    api-v3-key: your-api-v3-key
-    serial-no: your-cert-serial-no
-    private-key-path: /path/to/apiclient_key.pem
-    notify-url: https://your-domain.com/api/app/wallet/recharge/callback/wechat
+    app-id: ${WECHAT_APP_ID}
+    mch-id: ${WECHAT_MCH_ID}
+    api-v3-key: ${WECHAT_API_V3_KEY}
+    serial-no: ${WECHAT_SERIAL_NO}
+    private-key-path: ${WECHAT_PRIVATE_KEY_PATH}
+    notify-url: ${WECHAT_NOTIFY_URL}
 
 # Knife4j
 knife4j:
@@ -127,4 +128,4 @@ knife4j:
 
 logging:
   level:
-    com.translation: debug
+    com.translation: info

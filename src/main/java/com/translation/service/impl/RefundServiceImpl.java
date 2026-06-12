@@ -64,7 +64,7 @@ public class RefundServiceImpl extends ServiceImpl<RefundRecordMapper, RefundRec
         refundRecordMapper.insert(record);
 
         /* 更新订单状态为退款中 */
-        order.setStatus(OrderStatus.REFUNDED.getCode());
+        order.setStatus(OrderStatus.REFUNDING.getCode());
         orderMapper.updateById(order);
     }
 
@@ -90,7 +90,7 @@ public class RefundServiceImpl extends ServiceImpl<RefundRecordMapper, RefundRec
         refundRecordMapper.updateById(record);
 
         Order order = orderMapper.selectById(record.getOrderId());
-        if (order != null && order.getStatus() != OrderStatus.REFUNDED.getCode()) {
+        if (order != null && order.getStatus() == OrderStatus.REFUNDING.getCode()) {
             order.setStatus(OrderStatus.REFUNDED.getCode());
             orderMapper.updateById(order);
         }
@@ -114,7 +114,7 @@ public class RefundServiceImpl extends ServiceImpl<RefundRecordMapper, RefundRec
 
         /* 恢复订单状态为已支付 */
         Order order = orderMapper.selectById(record.getOrderId());
-        if (order != null && order.getStatus() == OrderStatus.REFUNDED.getCode()) {
+        if (order != null && order.getStatus() == OrderStatus.REFUNDING.getCode()) {
             order.setStatus(OrderStatus.PAID.getCode());
             orderMapper.updateById(order);
         }

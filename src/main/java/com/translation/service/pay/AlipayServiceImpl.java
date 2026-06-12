@@ -1,5 +1,6 @@
 package com.translation.service.pay;
 
+import com.alibaba.fastjson.JSONObject;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.DefaultAlipayClient;
@@ -7,6 +8,8 @@ import com.alipay.api.internal.util.AlipaySignature;
 import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.response.AlipayTradeQueryResponse;
+import com.translation.common.enums.ResultCode;
+import com.translation.common.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -55,18 +58,18 @@ public class AlipayServiceImpl implements PayService {
         request.setNotifyUrl(notifyUrl != null ? notifyUrl : this.notifyUrl);
         request.setReturnUrl(returnUrl != null ? returnUrl : this.returnUrl);
 
-        request.setBizContent("{" +
-                "\"out_trade_no\":\"" + orderNo + "\"," +
-                "\"total_amount\":\"" + amount.toPlainString() + "\"," +
-                "\"subject\":\"" + subject + "\"," +
-                "\"product_code\":\"FAST_INSTANT_TRADE_PAY\"" +
-                "}");
+        JSONObject bizContent = new JSONObject();
+        bizContent.put("out_trade_no", orderNo);
+        bizContent.put("total_amount", amount.toPlainString());
+        bizContent.put("subject", subject);
+        bizContent.put("product_code", "FAST_INSTANT_TRADE_PAY");
+        request.setBizContent(bizContent.toJSONString());
 
         try {
             return client.pageExecute(request).getBody();
         } catch (AlipayApiException e) {
             log.error("支付宝创建订单失败", e);
-            throw new RuntimeException("支付宝创建订单失败: " + e.getMessage());
+            throw new BusinessException(ResultCode.FAIL.getCode(), "支付宝创建订单失败");
         }
     }
 
@@ -84,7 +87,9 @@ public class AlipayServiceImpl implements PayService {
     public boolean queryOrderStatus(String orderNo) {
         AlipayClient client = getAlipayClient();
         AlipayTradeQueryRequest request = new AlipayTradeQueryRequest();
-        request.setBizContent("{\"out_trade_no\":\"" + orderNo + "\"}");
+        JSONObject bizContent = new JSONObject();
+        bizContent.put("out_trade_no", orderNo);
+        request.setBizContent(bizContent.toJSONString());
 
         try {
             AlipayTradeQueryResponse response = client.execute(request);

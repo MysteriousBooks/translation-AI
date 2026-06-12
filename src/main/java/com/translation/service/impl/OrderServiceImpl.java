@@ -168,15 +168,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             String nonce = resource.getStr("nonce");
             String associatedData = resource.getStr("associated_data", "");
 
-            PayService wechatService = wechatPayService;
-            String decrypted;
-            if (wechatService instanceof com.translation.service.pay.WechatPayServiceImpl) {
-                decrypted = ((com.translation.service.pay.WechatPayServiceImpl) wechatService)
-                        .decryptResource(ciphertext, nonce, associatedData);
-            } else {
-                log.error("微信支付服务类型异常");
-                return;
-            }
+            String decrypted = wechatPayService.decryptCallback(ciphertext, nonce, associatedData);
 
             cn.hutool.json.JSONObject decryptedJson = cn.hutool.json.JSONUtil.parseObj(decrypted);
             orderNo = decryptedJson.getStr("out_trade_no");

@@ -21,9 +21,9 @@ import com.translation.service.TokenStatisticsService;
 import com.translation.service.TranslateService;
 import com.translation.service.UserService;
 import com.translation.vo.app.TranslateResultVO;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +36,6 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TranslateServiceImpl extends ServiceImpl<TranslateRecordMapper, TranslateRecord> implements TranslateService {
 
     private final TranslateRecordMapper translateRecordMapper;
@@ -44,6 +43,21 @@ public class TranslateServiceImpl extends ServiceImpl<TranslateRecordMapper, Tra
     private final SysConfigService sysConfigService;
     private final TokenStatisticsService tokenStatisticsService;
     private final RedisUtil redisUtil;
+    private final TranslateService self;
+
+    public TranslateServiceImpl(TranslateRecordMapper translateRecordMapper,
+                                UserService userService,
+                                SysConfigService sysConfigService,
+                                TokenStatisticsService tokenStatisticsService,
+                                RedisUtil redisUtil,
+                                @Lazy TranslateService self) {
+        this.translateRecordMapper = translateRecordMapper;
+        this.userService = userService;
+        this.sysConfigService = sysConfigService;
+        this.tokenStatisticsService = tokenStatisticsService;
+        this.redisUtil = redisUtil;
+        this.self = self;
+    }
 
     @Value("${translation.llm.api-url}")
     private String apiUrl;
@@ -68,8 +82,13 @@ public class TranslateServiceImpl extends ServiceImpl<TranslateRecordMapper, Tra
 
         /* 计算费用 */
         int charCount = dto.getSourceText().length();
-        BigDecimal pricePerKchar = new BigDecimal(sysConfigService.getConfigValue("price_per_kchar"));
-        BigDecimal minConsume = new BigDecimal(sysConfigService.getConfigValue("min_consume"));
+        String priceConfig = sysConfigService.getConfigValue("price_per_kchar");
+        String minConsumeConfig = sysConfigService.getConfigValue("min_consume");
+        if (StrUtil.isBlank(priceConfig) || StrUtil.isBlank(minConsumeConfig)) {
+            throw new BusinessException("翻译价格配置未设置");
+        }
+        BigDecimal pricePerKchar = new BigDecimal(priceConfig);
+        BigDecimal minConsume = new BigDecimal(minConsumeConfig);
         BigDecimal costAmount = new BigDecimal(charCount)
                 .multiply(pricePerKchar)
                 .divide(new BigDecimal(1000), 6, RoundingMode.HALF_UP);
@@ -100,11 +119,12 @@ public class TranslateServiceImpl extends ServiceImpl<TranslateRecordMapper, Tra
             errorMsg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
         }
 
-        /* 数据库操作放在事务内 */
-        return saveTranslateResult(userId, dto, charCount, costAmount, pricePerKchar,
+        /* 数据库操作放在事务内（通过代理调用确保 @Transactional 生效） */
+        return self.saveTranslateResult(userId, dto, charCount, costAmount, pricePerKchar,
                 translatedText, tokenCount, success, errorMsg);
     }
 
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public TranslateResultVO saveTranslateResult(Long userId, TranslateDTO dto, int charCount,
             BigDecimal costAmount, BigDecimal pricePerKchar, String translatedText,
